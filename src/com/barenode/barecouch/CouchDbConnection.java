@@ -24,6 +24,9 @@ import com.barenode.bareconnection.RestProperties;
 
 public class CouchDbConnection {
 
+	public static final String REVISION_PARAM = "rev";
+	public static final String SEPARATOR = "/";
+
     private final RestProperties mProperties;
     private final String mDatabase;
 
@@ -34,28 +37,41 @@ public class CouchDbConnection {
     }
 
     
-    public boolean createDatabase() {
+    public boolean createDatabase() throws RestException {
     	try {
     		RestConnection connection = createConnection("");
 			connection.put();
 			return true;
 		} catch (RestException e) {
-			// CouchDb returns a 412 if database already exists
-			if(e.getResponseCode() == 412) {
-				return true;
+			// CouchDb returns a 412 Precondition Failed if database already exists
+			if(e.getStatusCode() == RestConnection.SC_PRECONDITION_FAILED) {
+				return false;
 			}
+			throw e;
 		}
-    	return false;
+    }
+
+    public Response deleteDatabase() throws RestException {
+		try {
+			RestConnection connection = createConnection("");
+			return connection.delete(Response.class);
+		} catch (RestException e) {
+			// CouchDb returns a 404 Not Found if database doesn't exist
+			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+				return null;
+			}
+			throw e;
+		}
     }
 
     public boolean contains(String docId) throws RestException {
 		try {
-    		RestConnection connection = createConnection("/" + docId);
+    		RestConnection connection = createConnection(SEPARATOR + docId);
 			connection.head();
 			return true;
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
-			if(e.getResponseCode() == 404) {
+			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
 				return false;
 			}
 			throw e;
@@ -64,36 +80,58 @@ public class CouchDbConnection {
 
     public <T extends Document>T get(Class<T> clss, String docId) throws RestException {
     	try {
-    		RestConnection connection = createConnection("/" + docId);
+    		RestConnection connection = createConnection(SEPARATOR + docId);
 			return connection.get(clss);
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
-			if(e.getResponseCode() == 404) {
+			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
 				return null;
 			}
 			throw e;
 		}
     }
 
+    public Response add(Document document) throws RestException {
+		RestConnection connection = createConnection("");
+		Response response = connection.post(document, Response.class);
+		document.setId(response.getId());
+		document.setRev(response.getRev());
+		return response;
+    }
+
     public Response save(Document document) throws RestException {
-		RestConnection connection = createConnection("/" + document.getId());
+        if(document.getId() == null) {
+            throw new RestException(RestConnection.SC_UNKNOWN, "The document passed to save() must contain a document Id!");
+        }
+		RestConnection connection = createConnection(SEPARATOR + document.getId());
 		Response response = connection.put(document, Response.class);
 		document.setRev(response.getRev());
 		return response;
     }
 
     public Response delete(Document document) throws RestException {
-		return delete(document.getId(), document.getRev());
+        return delete(document.getId(), document.getRev());
     }
 
     public Response delete(String docId, String revId) throws RestException {
     	HashMap<String, String> params = new HashMap<String, String>();
-    	params.put("rev", revId);
+    	params.put(REVISION_PARAM, revId);
 		RestConnection connection = new RestConnection.Builder()
 			.properties(mProperties)
 			.path(mDatabase + "/" + docId, params)
 			.build();
 		return connection.delete(Response.class);
+    }
+    
+    public <T> ViewIterator<T> queryView(String path, Class<T> clss, String key) throws RestException {
+    	HashMap<String, String> map = new HashMap<String,String>();
+    	map.put("key", key);
+		RestConnection connection = new RestConnection.Builder()
+			.properties(mProperties)
+			.path(mDatabase + path, map)
+			.build();
+		ViewResult result = new ViewResult(connection);
+    	return result.iterator(clss);
     }
 
 //    public ViewIterator query(String database, String viewName) throws RestException {

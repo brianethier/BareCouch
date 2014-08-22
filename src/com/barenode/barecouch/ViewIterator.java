@@ -1,63 +1,46 @@
 package com.barenode.barecouch;
 
 
+import java.io.IOException;
+import java.util.Iterator;
+
 import com.google.gson.Gson;
 import com.google.gson.stream.JsonReader;
-import com.barenode.bareconnection.RestConnection;
-import com.barenode.bareconnection.RestException;
-
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
 
-public class ViewIterator {
+public class ViewIterator<T> implements Iterator<T> {
 
-    private final RestConnection mConnection;
-    private final Gson mGson;
+    private final Gson mGson = new Gson();
     private final JsonReader mJsonReader;
+    private final Class<T> mClss;
 
 
-    public ViewIterator(RestConnection connection) throws RestException {
-        try {
-            mConnection = connection;
-            mGson = new Gson();
-            mJsonReader = new JsonReader(new InputStreamReader(new BufferedInputStream(mConnection.get(InputStream.class)), "UTF-8"));
-            mJsonReader.beginObject();
-            while (mJsonReader.hasNext()) {
-                String name = mJsonReader.nextName();
-                if (name.equals("rows")) {
-                    mJsonReader.beginArray();
-                    break;
-                } else {
-                    mJsonReader.skipValue();
-                }
-            }
-        }
-        catch(IOException e) {
-            throw new RestException(e);
-        }
+    public ViewIterator(JsonReader reader, Class<T> clss) {
+        mJsonReader = reader;
+        mClss = clss;
     }
 
-
-    public boolean hasNext() throws RestException {
+    
+    @Override
+    public boolean hasNext() {
         try {
             return mJsonReader.hasNext();
         }
         catch(IOException e) {
-            throw new RestException(e);
+            throw new DbAccessException(e);
         }
     }
 
-    public <T>T next(Class<T> clss) throws RestException {
+	@SuppressWarnings("unchecked")
+	@Override
+	public T next() {
         try {
             T value = null;
             mJsonReader.beginObject();
             while(mJsonReader.hasNext()) {
                 String nextName = mJsonReader.nextName();
                 if (nextName.equals("value")) {
-                    value = (T) mGson.fromJson(mJsonReader, clss);
+                    value = (T) mGson.fromJson(mJsonReader, mClss);
                 } else {
                     mJsonReader.skipValue();
                 }
@@ -66,21 +49,12 @@ public class ViewIterator {
             return value;
         }
         catch(IOException e) {
-            throw new RestException(e);
+            throw new DbAccessException(e);
         }
-    }
+	}
 
-    public void close() throws RestException {
-        try {
-            mJsonReader.endArray();
-            while(mJsonReader.hasNext()) {
-                mJsonReader.skipValue();
-            }
-            mJsonReader.endObject();
-            mConnection.disconnect();
-        }
-        catch(IOException e) {
-            throw new RestException(e);
-        }
-    }
+	@Override
+	public void remove() {
+        throw new DbAccessException("Not supported!");
+	}
 }

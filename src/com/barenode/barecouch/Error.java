@@ -1,15 +1,10 @@
 package com.barenode.barecouch;
 
+
 public class Error {
 
 	private String error;
 	private String reason;
-
-	
-	public Error(String error, String reason) {
-		this.error = error;
-		this.reason = reason;
-	}
 	
 	
 	public String getError() {
@@ -19,5 +14,4 @@ public class Error {
 	public String getReason() {
 		return reason;
 	}
-	
 }

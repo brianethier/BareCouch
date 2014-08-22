@@ -14,4 +14,11 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>BareConnection</name>
+			<type>2</type>
+			<location>C:/Users/Brian/Documents/Brian/AppEngine/workspace/BareConnection/src</location>
+		</link>
+	</linkedResources>
 </projectDescription>
