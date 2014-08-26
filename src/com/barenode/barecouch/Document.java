@@ -1,7 +1,7 @@
 package com.barenode.barecouch;
 
 
-public abstract class Document {
+public class Document {
 
     private String _rev;
     private String _id;

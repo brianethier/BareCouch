@@ -78,6 +78,21 @@ public class CouchDbConnection {
 		}
     }
 
+    public boolean contains(String docId, String revId) throws RestException {
+        try {
+            RestConnection connection = createConnection(SEPARATOR + docId);
+            connection.head();
+            String etag = connection.getConnection().getHeaderField("Etag");
+            return revId.equals(etag);
+        } catch (RestException e) {
+            // CouchDb returns a 404 Not Found if database doesn't contain document
+            if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+                return false;
+            }
+            throw e;
+        }
+    }
+
     public <T extends Document>T get(Class<T> clss, String docId) throws RestException {
     	try {
     		RestConnection connection = createConnection(SEPARATOR + docId);
@@ -100,9 +115,7 @@ public class CouchDbConnection {
     }
 
     public Response save(Document document) throws RestException {
-        if(document.getId() == null) {
-            throw new RestException(RestConnection.SC_UNKNOWN, "The document passed to save() must contain a document Id!");
-        }
+        ensureDocumentId(document);
 		RestConnection connection = createConnection(SEPARATOR + document.getId());
 		Response response = connection.put(document, Response.class);
 		document.setRev(response.getRev());
@@ -110,15 +123,12 @@ public class CouchDbConnection {
     }
 
     public Response delete(Document document) throws RestException {
-        return delete(document.getId(), document.getRev());
-    }
-
-    public Response delete(String docId, String revId) throws RestException {
+        ensureDocumentId(document);
     	HashMap<String, String> params = new HashMap<String, String>();
-    	params.put(REVISION_PARAM, revId);
+    	params.put(REVISION_PARAM, document.getRev());
 		RestConnection connection = new RestConnection.Builder()
 			.properties(mProperties)
-			.path(mDatabase + "/" + docId, params)
+			.path(mDatabase + "/" + document.getId(), params)
 			.build();
 		return connection.delete(Response.class);
     }
@@ -154,5 +164,11 @@ public class CouchDbConnection {
 			.properties(mProperties)
 			.path(mDatabase + path)
 			.build();
+    }
+    
+    private void ensureDocumentId(Document document) throws RestException {
+        if(document.getId() == null) {
+            throw new RestException(RestConnection.SC_UNKNOWN, "The document must contain a document Id!");
+        }
     }
 }
