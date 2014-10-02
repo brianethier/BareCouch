@@ -18,7 +18,7 @@
 		<link>
 			<name>BareConnection</name>
 			<type>2</type>
-			<location>C:/Users/Brian/Documents/Brian/AppEngine/workspace/BareConnection/src</location>
+			<location>../BareConnection/src</location>
 		</link>
 	</linkedResources>
 </projectDescription>
