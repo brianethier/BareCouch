@@ -34,7 +34,6 @@ public class CouchDbConnection {
 
     public static final String REVISION_PARAM = "rev";
     public static final String ETAG_FIELD = "Etag";
-    public static final String SEPARATOR = "/";
     public static final String ALL_DBS_URL = "/_all_dbs";
     public static final String SESSION_URL = "/_session";
 
@@ -78,7 +77,7 @@ public class CouchDbConnection {
 			return true;
 		} catch (RestException e) {
 			// CouchDb returns a 412 Precondition Failed if database already exists
-			if(e.getStatusCode() == RestConnection.SC_PRECONDITION_FAILED) {
+			if(e.getStatusCode() == RestConnection.SC_PRECON_FAILED) {
 				return false;
 			}
 			throw e;
@@ -284,7 +283,8 @@ public class CouchDbConnection {
     private RestConnection createConnection(String path, HashMap<String, String> params) throws RestException {
         return new RestConnection.Builder()
             .properties(mProperties)
-            .path(path == null ? mDatabase : mDatabase + SEPARATOR + path, params)
+            .path(path == null ? mDatabase : mDatabase + RestConnection.PATH_SEPARATOR + path)
+            .params(params)
             .build();
     }
     
