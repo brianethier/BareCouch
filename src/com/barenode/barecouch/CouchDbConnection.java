@@ -225,8 +225,14 @@ public class CouchDbConnection {
             .path(mDatabase + query.buildQuery())
             .build();
         try {
-            Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
-            return new ViewResult(reader);
+            if(query.hasMultipleKeys()) {
+                String keysAsJson = query.getKeysAsJson();
+                Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
+                return new ViewResult(reader);
+            } else {
+                Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
+                return new ViewResult(reader);
+            }
         } catch (UnsupportedEncodingException e) {
             throw new RestException(RestConnection.SC_UNKNOWN, e);
         }
@@ -239,8 +245,14 @@ public class CouchDbConnection {
             .path(mDatabase + query.buildQuery())
             .build();
         try {
-            Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
-            return new StreamingViewResult(connection, reader);
+            if(query.hasMultipleKeys()) {
+                String keysAsJson = query.getKeysAsJson();
+                Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
+                return new StreamingViewResult(connection, reader);
+            } else {
+                Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
+                return new StreamingViewResult(connection, reader);
+            }
         } catch (UnsupportedEncodingException e) {
             throw new RestException(RestConnection.SC_UNKNOWN, e);
         }
