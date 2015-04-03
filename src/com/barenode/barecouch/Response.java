@@ -1,12 +1,23 @@
 package com.barenode.barecouch;
 
 
-public interface Response {
+public class Response {
 
-    public String getId();
+    private String id;
+    private String rev;
+    private boolean ok;
 
-    public String getRev();
 
-    public boolean isOk();
-    
+    public String getId() {
+        return id;
+    }
+
+    public String getRev() {
+        return rev;
+    }
+
+    public boolean isOk() {
+        return ok;
+    }
+
 }

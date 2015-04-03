@@ -34,8 +34,9 @@ public class CouchDbConnection {
 
     public static final String REVISION_PARAM = "rev";
     public static final String ETAG_FIELD = "Etag";
-    public static final String ALL_DBS_URL = "/_all_dbs";
-    public static final String SESSION_URL = "/_session";
+    public static final String ALL_DBS_PATH = "_all_dbs";
+    public static final String UUIDS_PATH = "_uuids";
+    public static final String SESSION_PATH = "_session";
 
     private final RestProperties mProperties;
     private String mDatabase;
@@ -56,15 +57,24 @@ public class CouchDbConnection {
     public List<String> getAllDatabases() throws RestException {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
-            .path(ALL_DBS_URL)
+            .path(ALL_DBS_PATH)
             .build();
-        return connection.getList(String.class);
+        return connection.getReturnList(String.class);
+    }
+    
+    public List<String> getUUIDs(int count) throws RestException {
+        RestConnection connection = new RestConnection.Builder()
+            .properties(mProperties)
+            .path(UUIDS_PATH)
+            .param("count", String.valueOf(count))
+            .build();
+        return connection.get(UUIDList.class).uuids;
     }
 
     public <D> D getSession(Class<D> clss) throws RestException {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
-            .path(SESSION_URL)
+            .path(SESSION_PATH)
             .build();
         return connection.get(clss);
     }
@@ -84,8 +94,8 @@ public class CouchDbConnection {
 		}
     }
 
-    public DefaultResponse deleteDatabase() throws RestException {
-        return deleteDatabase(DefaultResponse.class);
+    public Response deleteDatabase() throws RestException {
+        return deleteDatabase(Response.class);
     }
 
     public <R> R deleteDatabase(Class<R> clss) throws RestException {
@@ -149,62 +159,50 @@ public class CouchDbConnection {
 		}
     }
     
-    /* ADD API */
+    /* CREATE API */
 
-    public DefaultResponse add(Document document) throws RestException {
-        return add(DefaultResponse.class, document);
-    }
-
-    public <R extends Response> R add(Class<R> clss, Document document) throws RestException {
+    public void create(Object document) throws RestException {
         ensureDatabase();
         RestConnection connection = createConnection(null);
-        R response = connection.post(clss, document);
-        document.setId(response.getId());
-        document.setRev(response.getRev());
-        return response;
-    }
-    
-    /* SAVE API */
-
-    public DefaultResponse save(Document document) throws RestException {
-        return save(DefaultResponse.class, document);
+        Response response = connection.post(Response.class, document);
+        DocumentUtils.setId(document, response.getId());
+        DocumentUtils.setRev(document, response.getRev());
     }
 
-    public <R extends Response> R save(Class<R> clss, Document document) throws RestException {
-        ensureDatabase();
-        ensureDocumentId(document.getId());
-        RestConnection connection = createConnection(document.getId());
-        R response = connection.put(clss, document);
-		document.setRev(response.getRev());
-		return response;
-    }
-
-    public DefaultResponse saveDesignDoc(String docId, Object object) throws RestException {
-        return saveDesignDoc(DefaultResponse.class, docId, object);
-    }
-
-    public <R extends Response> R saveDesignDoc(Class<R> clss, String docId, Object object) throws RestException {
+    public void create(String docId, InputStream in) throws RestException {
         ensureDatabase();
         ensureDocumentId(docId);
         RestConnection connection = createConnection(docId);
-        return connection.put(clss, object);
+        connection.put(Response.class, in);
+    }
+    
+    /* UPDATE API */
+
+    public void update(Object document) throws RestException {
+        ensureDatabase();
+        ensureDocumentId(DocumentUtils.getId(document));
+        RestConnection connection = createConnection(DocumentUtils.getId(document));
+        Response response = connection.put(Response.class, document);
+		DocumentUtils.setRev(document, response.getRev());
+    }
+
+    public void update(String docId, InputStream in) throws RestException {
+        ensureDatabase();
+        ensureDocumentId(docId);
+        RestConnection connection = createConnection(docId);
+        connection.put(Response.class, in);
     }
     
     /* DELETE API */
 
-    public DefaultResponse delete(Document document) throws RestException {
-        return delete(DefaultResponse.class, document);
-    }
-
-    public <R extends Response> R delete(Class<R> clss, Document document) throws RestException {
+    public String delete(Object document) throws RestException {
         ensureDatabase();
-        ensureDocumentId(document.getId());
+        ensureDocumentId(DocumentUtils.getId(document));
         HashMap<String, String> params = new HashMap<String, String>();
-        params.put(REVISION_PARAM, document.getRev());
-        RestConnection connection = createConnection(document.getId(), params);
-        R response = connection.delete(clss);
-        document.setRev(response.getRev());
-        return response;
+        params.put(REVISION_PARAM, DocumentUtils.getRev(document));
+        RestConnection connection = createConnection(DocumentUtils.getId(document), params);
+        Response response = connection.delete(Response.class);
+        return response.getRev();
     }
     
     /* QUERY API */
@@ -298,5 +296,10 @@ public class CouchDbConnection {
         if(docId == null) {
             throw new RestException(RestConnection.SC_UNKNOWN, "You must provide a valid docId!");
         }
+    }
+    
+    
+    public static class UUIDList {
+    	private List<String> uuids;
     }
 }
