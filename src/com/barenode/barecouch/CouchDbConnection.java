@@ -158,6 +158,12 @@ public class CouchDbConnection {
 			throw e;
 		}
     }
+
+    public <D> D find(Class<D> clss, String docId) throws RestException {
+        ensureDatabase();
+		RestConnection connection = createConnection(docId);
+		return connection.get(clss);
+    }
     
     /* CREATE API */
 
