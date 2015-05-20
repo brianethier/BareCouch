@@ -29,7 +29,7 @@ public class ViewIterator<T> implements Iterator<T> {
             return mJsonReader.hasNext();
         }
         catch(IOException e) {
-            throw new DbAccessException(e);
+            throw new DatabaseAccessException(e);
         }
     }
 
@@ -51,12 +51,12 @@ public class ViewIterator<T> implements Iterator<T> {
             return value;
         }
         catch(IOException e) {
-            throw new DbAccessException(e);
+            throw new DatabaseAccessException(e);
         }
 	}
 
 	@Override
 	public void remove() {
-        throw new DbAccessException("Not supported!");
+        throw new DatabaseAccessException("Not supported!");
 	}
 }

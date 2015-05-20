@@ -86,7 +86,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             jsonReader.endObject();
         }
         catch(IOException e) {
-            throw new DbAccessException(e);
+            throw new DatabaseAccessException(e);
         }
         finally {
             try {
@@ -117,12 +117,20 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return getAsString(FIELD_ID);
         }
 
+        public JsonElement getIdAsJsonElement() {
+            return getAsJsonElement(FIELD_ID);
+        }
+
         public <T> T getIdAsObject(Class<T> clss) {
             return getAsObject(FIELD_ID, clss);
         }
 
         public String getKey() {
             return getAsString(FIELD_KEY);
+        }
+
+        public JsonElement getKeyAsJsonElement() {
+            return getAsJsonElement(FIELD_KEY);
         }
 
         public <T> T getKeyAsObject(Class<T> clss) {
@@ -133,12 +141,20 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return getAsString(FIELD_VALUE);
         }
 
+        public JsonElement getValueAsJsonElement() {
+            return getAsJsonElement(FIELD_VALUE);
+        }
+
         public <T> T getValueAsObject(Class<T> clss) {
             return getAsObject(FIELD_VALUE, clss);
         }
 
         public String getDoc() {
             return getAsString(FIELD_DOC);
+        }
+
+        public JsonElement getDocAsJsonElement() {
+            return getAsJsonElement(FIELD_DOC);
         }
 
         public <T> T getDocAsObject(Class<T> clss) {
@@ -149,6 +165,10 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return getAsString(FIELD_ERROR);
         }
 
+        public JsonElement getErrorAsJsonElement() {
+            return mJsonObject.get(FIELD_ERROR);
+        }
+
         public <T> T getErrorAsObject(Class<T> clss) {
             return getAsObject(FIELD_ERROR, clss);
         }
@@ -156,6 +176,10 @@ public class ViewResult implements Iterable<ViewResult.Row> {
         private String getAsString(String field) {
             JsonElement element = mJsonObject.get(field);
             return element == null ? null : element.toString();
+        }
+        
+        private JsonElement getAsJsonElement(String field) {
+            return mJsonObject.get(field);
         }
         
         private <T> T getAsObject(String field, Class<T> clss) {

@@ -33,6 +33,7 @@ import com.barenode.bareconnection.RestProperties;
 public class CouchDbConnection {
 
     public static final String REVISION_PARAM = "rev";
+    public static final String COUNT_PARAM = "count";
     public static final String ETAG_FIELD = "Etag";
     public static final String ALL_DBS_PATH = "_all_dbs";
     public static final String UUIDS_PATH = "_uuids";
@@ -66,7 +67,7 @@ public class CouchDbConnection {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
             .path(UUIDS_PATH)
-            .param("count", String.valueOf(count))
+            .param(COUNT_PARAM, String.valueOf(count))
             .build();
         return connection.get(UUIDList.class).uuids;
     }
@@ -110,6 +111,21 @@ public class CouchDbConnection {
 			}
 			throw e;
 		}
+    }
+    
+    public DatabaseInfo getDatabaseInfo() throws RestException {
+        ensureDatabase();
+		RestConnection connection = createConnection(null);
+		return connection.get(DatabaseInfo.class);
+    }
+    
+    public boolean exists() {
+        try {
+        	getDatabaseInfo();
+        	return true;
+        } catch(RestException e) {
+        	return false;
+        }
     }
     
     /* RETRIEVE API */

@@ -84,7 +84,7 @@ public class StreamingViewResult implements Closeable {
             }
         }
         catch(IOException e) {
-            throw new DbAccessException(e);
+            throw new DatabaseAccessException(e);
         }
     }
 
@@ -95,7 +95,7 @@ public class StreamingViewResult implements Closeable {
             try {
                 return mJsonReader.hasNext();
             } catch (IOException e) {
-                throw new DbAccessException(e);
+                throw new DatabaseAccessException(e);
             }
         }
 
