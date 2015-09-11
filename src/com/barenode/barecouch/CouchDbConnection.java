@@ -119,13 +119,19 @@ public class CouchDbConnection {
 		return connection.get(DatabaseInfo.class);
     }
     
-    public boolean exists() {
-        try {
-        	getDatabaseInfo();
-        	return true;
-        } catch(RestException e) {
-        	return false;
-        }
+    public boolean exists() throws RestException {
+        ensureDatabase();
+		try {
+    		RestConnection connection = createConnection(null);
+			connection.head();
+			return true;
+		} catch (RestException e) {
+			// CouchDb returns a 404 Not Found if database doesn't exists
+			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+				return false;
+			}
+			throw e;
+		}
     }
     
     /* RETRIEVE API */

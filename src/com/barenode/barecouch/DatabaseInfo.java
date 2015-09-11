@@ -12,7 +12,7 @@ public class DatabaseInfo {
 	private long doc_del_count;
 	private String instance_start_time;
 	private long purge_seq;
-	private long update_seq;
+	private String update_seq;
 	
 	
 	public long getCommitted_update_seq() {
@@ -95,11 +95,11 @@ public class DatabaseInfo {
 		this.purge_seq = purge_seq;
 	}
 	
-	public long getUpdate_seq() {
+	public String getUpdate_seq() {
 		return update_seq;
 	}
 	
-	public void setUpdate_seq(long update_seq) {
+	public void setUpdate_seq(String update_seq) {
 		this.update_seq = update_seq;
 	}
 }
