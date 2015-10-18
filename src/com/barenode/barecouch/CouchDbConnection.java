@@ -26,9 +26,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import com.barenode.bareconnection.RestConnection;
-import com.barenode.bareconnection.RestException;
-import com.barenode.bareconnection.RestProperties;
+import ca.barelabs.bareconnection.RestConnection;
+import ca.barelabs.bareconnection.RestException;
+import ca.barelabs.bareconnection.RestProperties;
 
 public class CouchDbConnection {
 

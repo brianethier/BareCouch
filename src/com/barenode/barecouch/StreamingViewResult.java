@@ -6,7 +6,8 @@ import java.io.Reader;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import com.barenode.bareconnection.RestConnection;
+import ca.barelabs.bareconnection.RestConnection;
+
 import com.barenode.barecouch.ViewResult.Row;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;

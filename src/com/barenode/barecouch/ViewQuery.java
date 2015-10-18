@@ -10,9 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.barenode.bareconnection.RestConnection;
-import com.barenode.bareconnection.RestException;
-import com.barenode.bareconnection.RestUtils;
+import ca.barelabs.bareconnection.RestConnection;
+import ca.barelabs.bareconnection.RestException;
+import ca.barelabs.bareconnection.RestUtils;
+
 import com.google.gson.Gson;
 
 
