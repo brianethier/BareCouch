@@ -1,4 +1,4 @@
-package com.barenode.barecouch;
+package ca.barelabs.barecouch;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

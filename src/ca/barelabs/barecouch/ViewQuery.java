@@ -1,4 +1,4 @@
-package com.barenode.barecouch;
+package ca.barelabs.barecouch;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;

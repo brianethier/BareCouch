@@ -1,4 +1,4 @@
-package com.barenode.barecouch;
+package ca.barelabs.barecouch;
 
 @SuppressWarnings("serial")
 public class DatabaseAccessException extends RuntimeException {

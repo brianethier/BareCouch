@@ -1,4 +1,4 @@
-package com.barenode.barecouch;
+package ca.barelabs.barecouch;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -7,8 +7,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import ca.barelabs.bareconnection.RestConnection;
+import ca.barelabs.barecouch.ViewResult.Row;
 
-import com.barenode.barecouch.ViewResult.Row;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;

@@ -1,4 +1,4 @@
-package com.barenode.barecouch;
+package ca.barelabs.barecouch;
 
 public class DatabaseInfo {
 	
