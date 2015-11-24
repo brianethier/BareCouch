@@ -197,11 +197,11 @@ public class CouchDbConnection {
         DocumentUtils.setRev(document, response.getRev());
     }
 
-    public void create(String docId, InputStream in) throws RestException {
+    public Response create(String docId, InputStream in) throws RestException {
         ensureDatabase();
         ensureDocumentId(docId);
         RestConnection connection = createConnection(docId);
-        connection.put(Response.class, in);
+        return connection.put(Response.class, in);
     }
     
     /* UPDATE API */
@@ -214,23 +214,28 @@ public class CouchDbConnection {
 		DocumentUtils.setRev(document, response.getRev());
     }
 
-    public void update(String docId, InputStream in) throws RestException {
+    public Response update(String docId, InputStream in) throws RestException {
         ensureDatabase();
         ensureDocumentId(docId);
         RestConnection connection = createConnection(docId);
-        connection.put(Response.class, in);
+        return connection.put(Response.class, in);
     }
     
     /* DELETE API */
 
-    public String delete(Object document) throws RestException {
+    public void delete(Object document) throws RestException {
         ensureDatabase();
-        ensureDocumentId(DocumentUtils.getId(document));
+        Response response = delete(DocumentUtils.getId(document), DocumentUtils.getRev(document));
+        DocumentUtils.setRev(document, response.getRev());
+    }
+    
+    public Response delete(String id, String rev) throws RestException {
+        ensureDatabase();
+        ensureDocumentId(id);
         HashMap<String, String> params = new HashMap<String, String>();
-        params.put(REVISION_PARAM, DocumentUtils.getRev(document));
-        RestConnection connection = createConnection(DocumentUtils.getId(document), params);
-        Response response = connection.delete(Response.class);
-        return response.getRev();
+        params.put(REVISION_PARAM, rev);
+        RestConnection connection = createConnection(id, params);
+        return connection.delete(Response.class);
     }
     
     /* QUERY API */
