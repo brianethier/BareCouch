@@ -30,7 +30,7 @@ import ca.barelabs.bareconnection.RestConnection;
 import ca.barelabs.bareconnection.RestException;
 import ca.barelabs.bareconnection.RestProperties;
 
-public class CouchDbConnection {
+public class CouchDbClient {
 
     public static final String REVISION_PARAM = "rev";
     public static final String COUNT_PARAM = "count";
@@ -42,7 +42,7 @@ public class CouchDbConnection {
     private final RestProperties mProperties;
 
 
-    public CouchDbConnection(RestProperties properties) {
+    public CouchDbClient(RestProperties properties) {
         mProperties = properties;
     }
     
