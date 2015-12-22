@@ -46,14 +46,6 @@ public class CouchDbConnection {
         mProperties = properties;
     }
     
-    public List<String> getAllDatabases() throws RestException {
-        RestConnection connection = new RestConnection.Builder()
-            .properties(mProperties)
-            .path(ALL_DBS_PATH)
-            .build();
-        return connection.getReturnList(String.class);
-    }
-    
     public List<String> getUUIDs(int count) throws RestException {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
@@ -63,12 +55,24 @@ public class CouchDbConnection {
         return connection.get(UUIDList.class).uuids;
     }
 
+    public AuthSession getSession() throws RestException {
+        return getSession(AuthSession.class);
+    }
+
     public <D> D getSession(Class<D> clss) throws RestException {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
             .path(SESSION_PATH)
             .build();
         return connection.get(clss);
+    }
+    
+    public List<String> getAllDatabases() throws RestException {
+        RestConnection connection = new RestConnection.Builder()
+            .properties(mProperties)
+            .path(ALL_DBS_PATH)
+            .build();
+        return connection.getReturnList(String.class);
     }
     
     public boolean createDatabase(String database) throws RestException {
@@ -105,9 +109,13 @@ public class CouchDbConnection {
     }
     
     public DatabaseInfo getDatabaseInfo(String database) throws RestException {
+		return getDatabaseInfo(database, DatabaseInfo.class);
+    }
+    
+    public <R> R getDatabaseInfo(String database, Class<R> clss) throws RestException {
         ensureDatabase(database);
-		RestConnection connection = createConnection(database);
-		return connection.get(DatabaseInfo.class);
+        RestConnection connection = createConnection(database);
+        return connection.get(clss);
     }
     
     public boolean exists(String database) throws RestException {
@@ -156,11 +164,11 @@ public class CouchDbConnection {
         }
     }
 
-    public <D> D get(String database, Class<D> clss, String docId) throws RestException {
+    public <D> D get(String database, String docId, Class<D> documentClss) throws RestException {
         ensureDatabase(database);
     	try {
     		RestConnection connection = createConnection(database, docId);
-			return connection.get(clss);
+			return connection.get(documentClss);
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
 			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
@@ -170,49 +178,76 @@ public class CouchDbConnection {
 		}
     }
 
-    public <D> D find(String database, Class<D> clss, String docId) throws RestException {
+    public <D> D find(String database, String docId, Class<D> documentClss) throws RestException {
         ensureDatabase(database);
 		RestConnection connection = createConnection(database, docId);
-		return connection.get(clss);
+		return connection.get(documentClss);
     }
 
-    public void create(String database, Object document) throws RestException {
-        ensureDatabase(database);
-        RestConnection connection = createConnection(database);
-        Response response = connection.post(Response.class, document);
+    public Response create(String database, Object document) throws RestException {
+        Response response = create(database, document, Response.class);
         DocumentUtils.setId(document, response.getId());
         DocumentUtils.setRev(document, response.getRev());
+        return response;
+    }
+
+    public <D> D create(String database, Object document, Class<D> responseClss) throws RestException {
+        ensureDatabase(database);
+        RestConnection connection = createConnection(database);
+        return connection.post(responseClss, document);
     }
 
     public Response create(String database, String docId, InputStream in) throws RestException {
+        return create(database, docId, in, Response.class);
+    }
+
+    public <D> D create(String database, String docId, InputStream in, Class<D> responseClss) throws RestException {
         ensureDatabase(database);
         ensureDocumentId(docId);
         RestConnection connection = createConnection(database, docId);
-        return connection.put(Response.class, in);
+        return connection.put(responseClss, in);
     }
 
-    public void update(String database, Object document) throws RestException {
+    public Response update(String database, Object document) throws RestException {
+        Response response = update(database, document, Response.class);
+		DocumentUtils.setRev(document, response.getRev());
+		return response;
+    }
+
+    public <D> D update(String database, Object document, Class<D> responseClss) throws RestException {
         ensureDatabase(database);
         ensureDocumentId(DocumentUtils.getId(document));
         RestConnection connection = createConnection(database, DocumentUtils.getId(document));
-        Response response = connection.put(Response.class, document);
-		DocumentUtils.setRev(document, response.getRev());
+        return connection.put(responseClss, document);
     }
 
     public Response update(String database, String docId, InputStream in) throws RestException {
+        return update(database, docId, in, Response.class);
+    }
+
+    public <D> D update(String database, String docId, InputStream in, Class<D> responseClss) throws RestException {
         ensureDatabase(database);
         ensureDocumentId(docId);
         RestConnection connection = createConnection(database, docId);
-        return connection.put(Response.class, in);
+        return connection.put(responseClss, in);
     }
 
-    public void delete(String database, Object document) throws RestException {
+    public Response delete(String database, Object document) throws RestException {
         ensureDatabase(database);
-        Response response = delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document));
+        Response response = delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document), Response.class);
         DocumentUtils.setRev(document, response.getRev());
+        return response;
+    }
+
+    public <D> D delete(String database, Object document, Class<D> responseClss) throws RestException {
+        return delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document), responseClss);
     }
     
     public Response delete(String database, String docId, String rev) throws RestException {
+        return delete(database, docId, rev, Response.class);
+    }
+    
+    public <D> D delete(String database, String docId, String rev, Class<D> responseClss) throws RestException {
         ensureDatabase(database);
         ensureDocumentId(docId);
         HashMap<String, String> params = new HashMap<String, String>();
@@ -222,7 +257,7 @@ public class CouchDbConnection {
             .path(database + RestConnection.PATH_SEPARATOR + docId)
             .params(params)
             .build();
-        return connection.delete(Response.class);
+        return connection.delete(responseClss);
     }
     
     
