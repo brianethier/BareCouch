@@ -40,20 +40,11 @@ public class CouchDbConnection {
     public static final String SESSION_PATH = "_session";
 
     private final RestProperties mProperties;
-    private String mDatabase;
 
 
     public CouchDbConnection(RestProperties properties) {
         mProperties = properties;
     }
-
-    public CouchDbConnection(RestProperties properties, String database) {
-    	mProperties = properties;
-    	mDatabase = database;
-    }
-
-    
-    /* DATABASE API */
     
     public List<String> getAllDatabases() throws RestException {
         RestConnection connection = new RestConnection.Builder()
@@ -80,10 +71,10 @@ public class CouchDbConnection {
         return connection.get(clss);
     }
     
-    public boolean createDatabase() throws RestException {
-        ensureDatabase();
+    public boolean createDatabase(String database) throws RestException {
+        ensureDatabase(database);
     	try {
-    		RestConnection connection = createConnection(null);
+    		RestConnection connection = createConnection(database);
 			connection.put();
 			return true;
 		} catch (RestException e) {
@@ -95,14 +86,14 @@ public class CouchDbConnection {
 		}
     }
 
-    public Response deleteDatabase() throws RestException {
-        return deleteDatabase(Response.class);
+    public Response deleteDatabase(String database) throws RestException {
+        return deleteDatabase(database, Response.class);
     }
 
-    public <R> R deleteDatabase(Class<R> clss) throws RestException {
-        ensureDatabase();
+    public <R> R deleteDatabase(String database, Class<R> clss) throws RestException {
+        ensureDatabase(database);
 		try {
-			RestConnection connection = createConnection(null);
+			RestConnection connection = createConnection(database);
 			return connection.delete(clss);
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't exist
@@ -113,16 +104,16 @@ public class CouchDbConnection {
 		}
     }
     
-    public DatabaseInfo getDatabaseInfo() throws RestException {
-        ensureDatabase();
-		RestConnection connection = createConnection(null);
+    public DatabaseInfo getDatabaseInfo(String database) throws RestException {
+        ensureDatabase(database);
+		RestConnection connection = createConnection(database);
 		return connection.get(DatabaseInfo.class);
     }
     
-    public boolean exists() throws RestException {
-        ensureDatabase();
+    public boolean exists(String database) throws RestException {
+        ensureDatabase(database);
 		try {
-    		RestConnection connection = createConnection(null);
+    		RestConnection connection = createConnection(database);
 			connection.head();
 			return true;
 		} catch (RestException e) {
@@ -133,13 +124,11 @@ public class CouchDbConnection {
 			throw e;
 		}
     }
-    
-    /* RETRIEVE API */
 
-    public boolean contains(String docId) throws RestException {
-        ensureDatabase();
+    public boolean contains(String database, String docId) throws RestException {
+        ensureDatabase(database);
 		try {
-    		RestConnection connection = createConnection(docId);
+    		RestConnection connection = createConnection(database, docId);
 			connection.head();
 			return true;
 		} catch (RestException e) {
@@ -151,10 +140,10 @@ public class CouchDbConnection {
 		}
     }
 
-    public boolean containsAsLatest(String docId, String revId) throws RestException {
-        ensureDatabase();
+    public boolean containsAsLatest(String database, String docId, String revId) throws RestException {
+        ensureDatabase(database);
         try {
-            RestConnection connection = createConnection(docId);
+            RestConnection connection = createConnection(database, docId);
             connection.head();
             String etag = connection.getConnection().getHeaderField(ETAG_FIELD);
             return revId != null && etag != null && revId.equals(etag);
@@ -167,10 +156,10 @@ public class CouchDbConnection {
         }
     }
 
-    public <D> D get(Class<D> clss, String docId) throws RestException {
-        ensureDatabase();
+    public <D> D get(String database, Class<D> clss, String docId) throws RestException {
+        ensureDatabase(database);
     	try {
-    		RestConnection connection = createConnection(docId);
+    		RestConnection connection = createConnection(database, docId);
 			return connection.get(clss);
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
@@ -181,67 +170,64 @@ public class CouchDbConnection {
 		}
     }
 
-    public <D> D find(Class<D> clss, String docId) throws RestException {
-        ensureDatabase();
-		RestConnection connection = createConnection(docId);
+    public <D> D find(String database, Class<D> clss, String docId) throws RestException {
+        ensureDatabase(database);
+		RestConnection connection = createConnection(database, docId);
 		return connection.get(clss);
     }
-    
-    /* CREATE API */
 
-    public void create(Object document) throws RestException {
-        ensureDatabase();
-        RestConnection connection = createConnection(null);
+    public void create(String database, Object document) throws RestException {
+        ensureDatabase(database);
+        RestConnection connection = createConnection(database);
         Response response = connection.post(Response.class, document);
         DocumentUtils.setId(document, response.getId());
         DocumentUtils.setRev(document, response.getRev());
     }
 
-    public Response create(String docId, InputStream in) throws RestException {
-        ensureDatabase();
+    public Response create(String database, String docId, InputStream in) throws RestException {
+        ensureDatabase(database);
         ensureDocumentId(docId);
-        RestConnection connection = createConnection(docId);
+        RestConnection connection = createConnection(database, docId);
         return connection.put(Response.class, in);
     }
-    
-    /* UPDATE API */
 
-    public void update(Object document) throws RestException {
-        ensureDatabase();
+    public void update(String database, Object document) throws RestException {
+        ensureDatabase(database);
         ensureDocumentId(DocumentUtils.getId(document));
-        RestConnection connection = createConnection(DocumentUtils.getId(document));
+        RestConnection connection = createConnection(database, DocumentUtils.getId(document));
         Response response = connection.put(Response.class, document);
 		DocumentUtils.setRev(document, response.getRev());
     }
 
-    public Response update(String docId, InputStream in) throws RestException {
-        ensureDatabase();
+    public Response update(String database, String docId, InputStream in) throws RestException {
+        ensureDatabase(database);
         ensureDocumentId(docId);
-        RestConnection connection = createConnection(docId);
+        RestConnection connection = createConnection(database, docId);
         return connection.put(Response.class, in);
     }
-    
-    /* DELETE API */
 
-    public void delete(Object document) throws RestException {
-        ensureDatabase();
-        Response response = delete(DocumentUtils.getId(document), DocumentUtils.getRev(document));
+    public void delete(String database, Object document) throws RestException {
+        ensureDatabase(database);
+        Response response = delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document));
         DocumentUtils.setRev(document, response.getRev());
     }
     
-    public Response delete(String id, String rev) throws RestException {
-        ensureDatabase();
-        ensureDocumentId(id);
+    public Response delete(String database, String docId, String rev) throws RestException {
+        ensureDatabase(database);
+        ensureDocumentId(docId);
         HashMap<String, String> params = new HashMap<String, String>();
         params.put(REVISION_PARAM, rev);
-        RestConnection connection = createConnection(id, params);
+        RestConnection connection = new RestConnection.Builder()
+            .properties(mProperties)
+            .path(database + RestConnection.PATH_SEPARATOR + docId)
+            .params(params)
+            .build();
         return connection.delete(Response.class);
     }
     
-    /* QUERY API */
     
-    public <T> List<T> queryView(ViewQuery query, Class<T> clss) throws RestException {
-        ViewResult result = queryView(query);
+    public <T> List<T> queryView(String database, ViewQuery query, Class<T> clss) throws RestException {
+        ViewResult result = queryView(database, query);
         Iterator<ViewResult.Row> iterator = result.iterator();
         ArrayList<T> list = new ArrayList<T>();
         while(iterator.hasNext()) {
@@ -251,11 +237,11 @@ public class CouchDbConnection {
         return list;
     }
     
-    public ViewResult queryView(ViewQuery query) throws RestException {
-        ensureDatabase();
+    public ViewResult queryView(String database, ViewQuery query) throws RestException {
+        ensureDatabase(database);
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
-            .path(mDatabase + query.buildQuery())
+            .path(database + query.buildQuery())
             .build();
         try {
             if(query.hasMultipleKeys()) {
@@ -271,11 +257,11 @@ public class CouchDbConnection {
         }
     }
     
-    public StreamingViewResult queryForStreamingView(ViewQuery query) throws RestException {
-        ensureDatabase();
+    public StreamingViewResult queryForStreamingView(String database, ViewQuery query) throws RestException {
+        ensureDatabase(database);
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
-            .path(mDatabase + query.buildQuery())
+            .path(database + query.buildQuery())
             .build();
         try {
             if(query.hasMultipleKeys()) {
@@ -291,48 +277,19 @@ public class CouchDbConnection {
         }
     }
     
-//    public <T> ViewIterator<T> queryView(String path, Class<T> clss, String key, String key2) throws RestException {
-//        ensureDatabase();
-//    	HashMap<String, String> map = new HashMap<String,String>();
-//    	map.put("key", key);
-//		RestConnection connection = new RestConnection.Builder()
-//			.properties(mProperties)
-//			.path(mDatabase + path, key == null ? null : map)
-//			.build();
-////		ViewResult result = new ViewResult(connection, key2);
-////    	return result.iterator(clss);
-//    	return null;
-//    }
-
-//    public ViewIterator query(String database, String viewName) throws RestException {
-//        RestConnection connection = new RestConnection(SERVER + "/" + database + viewName);
-//        connection.setAuthorization(mUsername, mPassword);
-//        return new ViewIterator(connection);
-//    }
-//
-//    public <T> List<T> query(String database, String viewName, Class<T> clss) throws RestException {
-//        ArrayList<T> list = new ArrayList<T>();
-//        ViewIterator iterator = query(database, viewName);
-//        while(iterator.hasNext())
-//            list.add(iterator.next(clss));
-//        iterator.close();
-//        return list;
-//    }
-    
-    private RestConnection createConnection(String path) throws RestException {
-        return createConnection(path, null);
+    private RestConnection createConnection(String database) throws RestException {
+        return createConnection(database, null);
     }
     
-    private RestConnection createConnection(String path, HashMap<String, String> params) throws RestException {
+    private RestConnection createConnection(String database, String docId) throws RestException {
         return new RestConnection.Builder()
             .properties(mProperties)
-            .path(path == null ? mDatabase : mDatabase + RestConnection.PATH_SEPARATOR + path)
-            .params(params)
+            .path(docId == null ? database : database + RestConnection.PATH_SEPARATOR + docId)
             .build();
     }
     
-    private void ensureDatabase() throws RestException {
-        if(mDatabase == null || mDatabase.isEmpty()) {
+    private void ensureDatabase(String database) throws RestException {
+        if(database == null || database.isEmpty()) {
             throw new RestException(RestConnection.SC_UNKNOWN, "No database was provided for this operation!");
         }
     }
