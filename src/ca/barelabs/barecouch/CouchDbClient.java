@@ -17,10 +17,10 @@ package ca.barelabs.barecouch;
 
 
 import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -46,7 +46,7 @@ public class CouchDbClient {
         mProperties = properties;
     }
     
-    public List<String> getUUIDs(int count) throws RestException {
+    public List<String> getUUIDs(int count) throws IOException {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
             .path(UUIDS_PATH)
@@ -55,11 +55,11 @@ public class CouchDbClient {
         return connection.get(UUIDList.class).uuids;
     }
 
-    public AuthSession getSession() throws RestException {
+    public AuthSession getSession() throws IOException {
         return getSession(AuthSession.class);
     }
 
-    public <D> D getSession(Class<D> clss) throws RestException {
+    public <D> D getSession(Class<D> clss) throws IOException {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
             .path(SESSION_PATH)
@@ -67,7 +67,7 @@ public class CouchDbClient {
         return connection.get(clss);
     }
     
-    public List<String> getAllDatabases() throws RestException {
+    public List<String> getAllDatabases() throws IOException {
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
             .path(ALL_DBS_PATH)
@@ -75,7 +75,7 @@ public class CouchDbClient {
         return connection.getReturnList(String.class);
     }
     
-    public boolean createDatabase(String database) throws RestException {
+    public boolean createDatabase(String database) throws IOException {
         ensureDatabase(database);
     	try {
     		RestConnection connection = createConnection(database);
@@ -90,11 +90,11 @@ public class CouchDbClient {
 		}
     }
 
-    public Response deleteDatabase(String database) throws RestException {
+    public Response deleteDatabase(String database) throws IOException {
         return deleteDatabase(database, Response.class);
     }
 
-    public <R> R deleteDatabase(String database, Class<R> clss) throws RestException {
+    public <R> R deleteDatabase(String database, Class<R> clss) throws IOException {
         ensureDatabase(database);
 		try {
 			RestConnection connection = createConnection(database);
@@ -108,17 +108,17 @@ public class CouchDbClient {
 		}
     }
     
-    public DatabaseInfo getDatabaseInfo(String database) throws RestException {
+    public DatabaseInfo getDatabaseInfo(String database) throws IOException {
 		return getDatabaseInfo(database, DatabaseInfo.class);
     }
     
-    public <R> R getDatabaseInfo(String database, Class<R> clss) throws RestException {
+    public <R> R getDatabaseInfo(String database, Class<R> clss) throws IOException {
         ensureDatabase(database);
         RestConnection connection = createConnection(database);
         return connection.get(clss);
     }
     
-    public boolean exists(String database) throws RestException {
+    public boolean exists(String database) throws IOException {
         ensureDatabase(database);
 		try {
     		RestConnection connection = createConnection(database);
@@ -133,7 +133,7 @@ public class CouchDbClient {
 		}
     }
 
-    public boolean contains(String database, String docId) throws RestException {
+    public boolean contains(String database, String docId) throws IOException {
         ensureDatabase(database);
 		try {
     		RestConnection connection = createConnection(database, docId);
@@ -148,7 +148,7 @@ public class CouchDbClient {
 		}
     }
 
-    public boolean containsAsLatest(String database, String docId, String revId) throws RestException {
+    public boolean containsAsLatest(String database, String docId, String revId) throws IOException {
         ensureDatabase(database);
         try {
             RestConnection connection = createConnection(database, docId);
@@ -164,7 +164,7 @@ public class CouchDbClient {
         }
     }
 
-    public <D> D get(String database, String docId, Class<D> documentClss) throws RestException {
+    public <D> D get(String database, String docId, Class<D> documentClss) throws IOException {
         ensureDatabase(database);
     	try {
     		RestConnection connection = createConnection(database, docId);
@@ -178,76 +178,76 @@ public class CouchDbClient {
 		}
     }
 
-    public <D> D find(String database, String docId, Class<D> documentClss) throws RestException {
+    public <D> D find(String database, String docId, Class<D> documentClss) throws IOException {
         ensureDatabase(database);
 		RestConnection connection = createConnection(database, docId);
 		return connection.get(documentClss);
     }
 
-    public Response create(String database, Object document) throws RestException {
+    public Response create(String database, Object document) throws IOException {
         Response response = create(database, document, Response.class);
         DocumentUtils.setId(document, response.getId());
         DocumentUtils.setRev(document, response.getRev());
         return response;
     }
 
-    public <D> D create(String database, Object document, Class<D> responseClss) throws RestException {
+    public <D> D create(String database, Object document, Class<D> responseClss) throws IOException {
         ensureDatabase(database);
         RestConnection connection = createConnection(database);
         return connection.post(responseClss, document);
     }
 
-    public Response create(String database, String docId, InputStream in) throws RestException {
+    public Response create(String database, String docId, InputStream in) throws IOException {
         return create(database, docId, in, Response.class);
     }
 
-    public <D> D create(String database, String docId, InputStream in, Class<D> responseClss) throws RestException {
+    public <D> D create(String database, String docId, InputStream in, Class<D> responseClss) throws IOException {
         ensureDatabase(database);
         ensureDocumentId(docId);
         RestConnection connection = createConnection(database, docId);
         return connection.put(responseClss, in);
     }
 
-    public Response update(String database, Object document) throws RestException {
+    public Response update(String database, Object document) throws IOException {
         Response response = update(database, document, Response.class);
 		DocumentUtils.setRev(document, response.getRev());
 		return response;
     }
 
-    public <D> D update(String database, Object document, Class<D> responseClss) throws RestException {
+    public <D> D update(String database, Object document, Class<D> responseClss) throws IOException {
         ensureDatabase(database);
         ensureDocumentId(DocumentUtils.getId(document));
         RestConnection connection = createConnection(database, DocumentUtils.getId(document));
         return connection.put(responseClss, document);
     }
 
-    public Response update(String database, String docId, InputStream in) throws RestException {
+    public Response update(String database, String docId, InputStream in) throws IOException {
         return update(database, docId, in, Response.class);
     }
 
-    public <D> D update(String database, String docId, InputStream in, Class<D> responseClss) throws RestException {
+    public <D> D update(String database, String docId, InputStream in, Class<D> responseClss) throws IOException {
         ensureDatabase(database);
         ensureDocumentId(docId);
         RestConnection connection = createConnection(database, docId);
         return connection.put(responseClss, in);
     }
 
-    public Response delete(String database, Object document) throws RestException {
+    public Response delete(String database, Object document) throws IOException {
         ensureDatabase(database);
         Response response = delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document), Response.class);
         DocumentUtils.setRev(document, response.getRev());
         return response;
     }
 
-    public <D> D delete(String database, Object document, Class<D> responseClss) throws RestException {
+    public <D> D delete(String database, Object document, Class<D> responseClss) throws IOException {
         return delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document), responseClss);
     }
     
-    public Response delete(String database, String docId, String rev) throws RestException {
+    public Response delete(String database, String docId, String rev) throws IOException {
         return delete(database, docId, rev, Response.class);
     }
     
-    public <D> D delete(String database, String docId, String rev, Class<D> responseClss) throws RestException {
+    public <D> D delete(String database, String docId, String rev, Class<D> responseClss) throws IOException {
         ensureDatabase(database);
         ensureDocumentId(docId);
         HashMap<String, String> params = new HashMap<String, String>();
@@ -261,7 +261,7 @@ public class CouchDbClient {
     }
     
     
-    public <T> List<T> queryView(String database, ViewQuery query, Class<T> clss) throws RestException {
+    public <T> List<T> queryView(String database, ViewQuery query, Class<T> clss) throws IOException {
         ViewResult result = queryView(database, query);
         Iterator<ViewResult.Row> iterator = result.iterator();
         ArrayList<T> list = new ArrayList<T>();
@@ -272,66 +272,58 @@ public class CouchDbClient {
         return list;
     }
     
-    public ViewResult queryView(String database, ViewQuery query) throws RestException {
+    public ViewResult queryView(String database, ViewQuery query) throws IOException {
         ensureDatabase(database);
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
             .path(database + query.buildQuery())
             .build();
-        try {
-            if(query.hasMultipleKeys()) {
-                String keysAsJson = query.getKeysAsJson();
-                Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
-                return new ViewResult(reader);
-            } else {
-                Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
-                return new ViewResult(reader);
-            }
-        } catch (UnsupportedEncodingException e) {
-            throw new RestException(RestConnection.SC_UNKNOWN, e);
+        if(query.hasMultipleKeys()) {
+            String keysAsJson = query.getKeysAsJson();
+            Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
+            return new ViewResult(reader);
+        } else {
+            Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
+            return new ViewResult(reader);
         }
     }
     
-    public StreamingViewResult queryForStreamingView(String database, ViewQuery query) throws RestException {
+    public StreamingViewResult queryForStreamingView(String database, ViewQuery query) throws IOException {
         ensureDatabase(database);
         RestConnection connection = new RestConnection.Builder()
             .properties(mProperties)
             .path(database + query.buildQuery())
             .build();
-        try {
-            if(query.hasMultipleKeys()) {
-                String keysAsJson = query.getKeysAsJson();
-                Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
-                return new StreamingViewResult(connection, reader);
-            } else {
-                Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
-                return new StreamingViewResult(connection, reader);
-            }
-        } catch (UnsupportedEncodingException e) {
-            throw new RestException(RestConnection.SC_UNKNOWN, e);
+        if(query.hasMultipleKeys()) {
+            String keysAsJson = query.getKeysAsJson();
+            Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
+            return new StreamingViewResult(connection, reader);
+        } else {
+            Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
+            return new StreamingViewResult(connection, reader);
         }
     }
     
-    private RestConnection createConnection(String database) throws RestException {
+    private RestConnection createConnection(String database) throws IOException {
         return createConnection(database, null);
     }
     
-    private RestConnection createConnection(String database, String docId) throws RestException {
+    private RestConnection createConnection(String database, String docId) throws IOException {
         return new RestConnection.Builder()
             .properties(mProperties)
             .path(docId == null ? database : database + RestConnection.PATH_SEPARATOR + docId)
             .build();
     }
     
-    private void ensureDatabase(String database) throws RestException {
+    private void ensureDatabase(String database) throws IOException {
         if(database == null || database.isEmpty()) {
-            throw new RestException(RestConnection.SC_UNKNOWN, "No database was provided for this operation!");
+            throw new IllegalArgumentException("No database was provided for this operation!");
         }
     }
     
-    private void ensureDocumentId(String docId) throws RestException {
+    private void ensureDocumentId(String docId) throws IOException {
         if(docId == null) {
-            throw new RestException(RestConnection.SC_UNKNOWN, "You must provide a valid docId!");
+            throw new IllegalArgumentException("You must provide a valid docId!");
         }
     }
     
