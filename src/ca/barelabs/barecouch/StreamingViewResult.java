@@ -2,11 +2,12 @@ package ca.barelabs.barecouch;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.Reader;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import ca.barelabs.bareconnection.RestConnection;
+import ca.barelabs.bareconnection.RestResponse;
 import ca.barelabs.barecouch.ViewResult.Row;
 
 import com.google.gson.JsonElement;
@@ -15,7 +16,7 @@ import com.google.gson.stream.JsonReader;
 
 public class StreamingViewResult implements Closeable {
 
-    private final RestConnection mConnection;
+    private final RestResponse mResponse;
     private final JsonParser mJsonParser = new JsonParser();
     private final JsonReader mJsonReader;
     private long mOffset;
@@ -25,9 +26,9 @@ public class StreamingViewResult implements Closeable {
     private boolean mClosed;
     
 
-    public StreamingViewResult(RestConnection connection, Reader reader) {
-        mConnection = connection;
-        mJsonReader = new JsonReader(reader);
+    public StreamingViewResult(RestResponse response) throws UnsupportedEncodingException, IOException {
+        mResponse = response;
+        mJsonReader = new JsonReader(new InputStreamReader(mResponse.getContent(), mResponse.getIncomingCharset()));
         parseMetadata(mJsonReader);
     }
     
@@ -45,10 +46,10 @@ public class StreamingViewResult implements Closeable {
     }
 
     public Iterator<ViewResult.Row> iterator() {
-        if(mClosed) {
+        if (mClosed) {
             throw new IllegalStateException("Access to iterator is not possible after view result was closed or disconnected.");
         }
-        if(mIteratorCreated) {
+        if (mIteratorCreated) {
             throw new IllegalStateException("Iterator can only be called once!");
         }
         mIteratorCreated = true;
@@ -57,11 +58,8 @@ public class StreamingViewResult implements Closeable {
     
     @Override
     public void close() {
-        try {
-            mClosed = true;
-            mJsonReader.close();
-        } catch (IOException e) { /* Nothing else we could do here */ }
-        mConnection.disconnect();
+        mClosed = true;
+        mResponse.disconnect();
     }
     
     private void parseMetadata(JsonReader jsonReader) {

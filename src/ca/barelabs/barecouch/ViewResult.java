@@ -2,10 +2,12 @@ package ca.barelabs.barecouch;
 
 
 import java.io.IOException;
-import java.io.Reader;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import ca.barelabs.bareconnection.RestUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -27,8 +29,8 @@ public class ViewResult implements Iterable<ViewResult.Row> {
     private List<Row> mRows = new ArrayList<Row>();
     
 
-    public ViewResult(Reader reader) {
-        parseMetadata(new JsonReader(reader));
+    public ViewResult(String result) {
+        parseMetadata(result);
     }
     
 
@@ -60,7 +62,8 @@ public class ViewResult implements Iterable<ViewResult.Row> {
         return mRows.isEmpty();
     }
     
-    private final void parseMetadata(JsonReader jsonReader) {
+    private final void parseMetadata(String result) {
+        JsonReader jsonReader = new JsonReader(new StringReader(result));
         JsonParser jsonParser = new JsonParser();
         try {
             jsonReader.beginObject();
@@ -89,9 +92,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             throw new DatabaseAccessException(e);
         }
         finally {
-            try {
-                jsonReader.close();
-            } catch (IOException e) { /* Nothing we can do */ }
+            RestUtils.closeQuietly(jsonReader);
         }
     }
 

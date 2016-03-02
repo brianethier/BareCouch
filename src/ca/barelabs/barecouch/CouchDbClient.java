@@ -16,11 +16,8 @@
 package ca.barelabs.barecouch;
 
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,6 +26,7 @@ import java.util.List;
 import ca.barelabs.bareconnection.RestConnection;
 import ca.barelabs.bareconnection.RestException;
 import ca.barelabs.bareconnection.RestProperties;
+import ca.barelabs.bareconnection.RestResponse;
 
 public class CouchDbClient {
 
@@ -52,7 +50,7 @@ public class CouchDbClient {
             .path(UUIDS_PATH)
             .param(COUNT_PARAM, String.valueOf(count))
             .build();
-        return connection.get(UUIDList.class).uuids;
+        return connection.get().parseAs(UUIDList.class).uuids;
     }
 
     public AuthSession getSession() throws IOException {
@@ -64,7 +62,7 @@ public class CouchDbClient {
             .properties(mProperties)
             .path(SESSION_PATH)
             .build();
-        return connection.get(clss);
+        return connection.get().parseAs(clss);
     }
     
     public List<String> getAllDatabases() throws IOException {
@@ -72,7 +70,7 @@ public class CouchDbClient {
             .properties(mProperties)
             .path(ALL_DBS_PATH)
             .build();
-        return connection.getReturnList(String.class);
+        return connection.get().parseAsList(String.class);
     }
     
     public boolean createDatabase(String database) throws IOException {
@@ -83,7 +81,7 @@ public class CouchDbClient {
 			return true;
 		} catch (RestException e) {
 			// CouchDb returns a 412 Precondition Failed if database already exists
-			if(e.getStatusCode() == RestConnection.SC_PRECON_FAILED) {
+			if (e.getStatusCode() == RestConnection.SC_PRECON_FAILED) {
 				return false;
 			}
 			throw e;
@@ -98,10 +96,10 @@ public class CouchDbClient {
         ensureDatabase(database);
 		try {
 			RestConnection connection = createConnection(database);
-			return connection.delete(clss);
+			return connection.delete().parseAs(clss);
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't exist
-			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+			if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
 				return null;
 			}
 			throw e;
@@ -115,18 +113,18 @@ public class CouchDbClient {
     public <R> R getDatabaseInfo(String database, Class<R> clss) throws IOException {
         ensureDatabase(database);
         RestConnection connection = createConnection(database);
-        return connection.get(clss);
+        return connection.get().parseAs(clss);
     }
     
     public boolean exists(String database) throws IOException {
         ensureDatabase(database);
 		try {
     		RestConnection connection = createConnection(database);
-			connection.head();
+			connection.head().parse();
 			return true;
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't exists
-			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+			if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
 				return false;
 			}
 			throw e;
@@ -137,11 +135,11 @@ public class CouchDbClient {
         ensureDatabase(database);
 		try {
     		RestConnection connection = createConnection(database, docId);
-			connection.head();
+			connection.head().parse();
 			return true;
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
-			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+			if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
 				return false;
 			}
 			throw e;
@@ -151,13 +149,14 @@ public class CouchDbClient {
     public boolean containsAsLatest(String database, String docId, String revId) throws IOException {
         ensureDatabase(database);
         try {
-            RestConnection connection = createConnection(database, docId);
-            connection.head();
-            String etag = connection.getConnection().getHeaderField(ETAG_FIELD);
+            RestConnection connection = createConnection(database, docId);            
+            RestResponse response = connection.head();
+            response.parse();
+            String etag = response.getConnection().getHeaderField(ETAG_FIELD);
             return revId != null && etag != null && revId.equals(etag);
         } catch (RestException e) {
             // CouchDb returns a 404 Not Found if database doesn't contain document
-            if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+            if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
                 return false;
             }
             throw e;
@@ -168,10 +167,10 @@ public class CouchDbClient {
         ensureDatabase(database);
     	try {
     		RestConnection connection = createConnection(database, docId);
-			return connection.get(documentClss);
+			return connection.get().parseAs(documentClss);
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
-			if(e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+			if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
 				return null;
 			}
 			throw e;
@@ -181,7 +180,7 @@ public class CouchDbClient {
     public <D> D find(String database, String docId, Class<D> documentClss) throws IOException {
         ensureDatabase(database);
 		RestConnection connection = createConnection(database, docId);
-		return connection.get(documentClss);
+		return connection.get().parseAs(documentClss);
     }
 
     public Response create(String database, Object document) throws IOException {
@@ -194,7 +193,7 @@ public class CouchDbClient {
     public <D> D create(String database, Object document, Class<D> responseClss) throws IOException {
         ensureDatabase(database);
         RestConnection connection = createConnection(database);
-        return connection.post(responseClss, document);
+        return connection.post(document).parseAs(responseClss);
     }
 
     public Response create(String database, String docId, InputStream in) throws IOException {
@@ -205,7 +204,7 @@ public class CouchDbClient {
         ensureDatabase(database);
         ensureDocumentId(docId);
         RestConnection connection = createConnection(database, docId);
-        return connection.put(responseClss, in);
+        return connection.put(in).parseAs(responseClss);
     }
 
     public Response update(String database, Object document) throws IOException {
@@ -218,7 +217,7 @@ public class CouchDbClient {
         ensureDatabase(database);
         ensureDocumentId(DocumentUtils.getId(document));
         RestConnection connection = createConnection(database, DocumentUtils.getId(document));
-        return connection.put(responseClss, document);
+        return connection.put(document).parseAs(responseClss);
     }
 
     public Response update(String database, String docId, InputStream in) throws IOException {
@@ -229,7 +228,7 @@ public class CouchDbClient {
         ensureDatabase(database);
         ensureDocumentId(docId);
         RestConnection connection = createConnection(database, docId);
-        return connection.put(responseClss, in);
+        return connection.put(in).parseAs(responseClss);
     }
 
     public Response delete(String database, Object document) throws IOException {
@@ -257,7 +256,7 @@ public class CouchDbClient {
             .path(database + RestConnection.PATH_SEPARATOR + docId)
             .params(params)
             .build();
-        return connection.delete(responseClss);
+        return connection.delete().parseAs(responseClss);
     }
     
     
@@ -265,7 +264,7 @@ public class CouchDbClient {
         ViewResult result = queryView(database, query);
         Iterator<ViewResult.Row> iterator = result.iterator();
         ArrayList<T> list = new ArrayList<T>();
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             ViewResult.Row row = iterator.next();
             list.add(query.isIncludeDocs() ? row.getDocAsObject(clss) : row.getValueAsObject(clss));
         }
@@ -278,13 +277,11 @@ public class CouchDbClient {
             .properties(mProperties)
             .path(database + query.buildQuery())
             .build();
-        if(query.hasMultipleKeys()) {
+        if (query.hasMultipleKeys()) {
             String keysAsJson = query.getKeysAsJson();
-            Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
-            return new ViewResult(reader);
+            return new ViewResult(connection.post(keysAsJson).parse());
         } else {
-            Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
-            return new ViewResult(reader);
+            return new ViewResult(connection.get().parse());
         }
     }
     
@@ -294,13 +291,11 @@ public class CouchDbClient {
             .properties(mProperties)
             .path(database + query.buildQuery())
             .build();
-        if(query.hasMultipleKeys()) {
+        if (query.hasMultipleKeys()) {
             String keysAsJson = query.getKeysAsJson();
-            Reader reader = new InputStreamReader(new BufferedInputStream(connection.post(InputStream.class, keysAsJson)), RestConnection.DEFAULT_CHARSET);
-            return new StreamingViewResult(connection, reader);
+            return new StreamingViewResult(connection.post(keysAsJson));
         } else {
-            Reader reader = new InputStreamReader(new BufferedInputStream(connection.get(InputStream.class)), RestConnection.DEFAULT_CHARSET);
-            return new StreamingViewResult(connection, reader);
+            return new StreamingViewResult(connection.get());
         }
     }
     
