@@ -1,13 +1,12 @@
 package ca.barelabs.barecouch;
 
-
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import ca.barelabs.bareconnection.RestUtils;
+import ca.barelabs.bareconnection.IOUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -92,7 +91,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             throw new DatabaseAccessException(e);
         }
         finally {
-            RestUtils.closeQuietly(jsonReader);
+            IOUtils.closeQuietly(jsonReader);
         }
     }
 

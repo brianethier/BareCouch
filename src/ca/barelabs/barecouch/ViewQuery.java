@@ -392,7 +392,7 @@ public class ViewQuery {
     public String buildQuery() throws RestException {
         try {
             Map<String, String> params = createParams();
-            return createViewPath() + "?" + RestUtils.buildQuery(params, RestConnection.DEFAULT_CHARSET);
+            return createViewPath() + "?" + RestUtils.toQuery(params, RestConnection.DEFAULT_CHARSET);
         } catch (UnsupportedEncodingException e) {
             throw new RestException(RestConnection.SC_UNKNOWN, e);
         }
