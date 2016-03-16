@@ -1,4 +1,4 @@
-package ca.barelabs.barecouch;
+package ca.barelabs.barecouch.responses;
 
 
 public class AuthInfo {

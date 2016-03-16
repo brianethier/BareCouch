@@ -30,6 +30,9 @@ import ca.barelabs.bareconnection.RestException;
 import ca.barelabs.bareconnection.RestProperties;
 import ca.barelabs.bareconnection.RestResponse;
 import ca.barelabs.bareconnection.RestUtils;
+import ca.barelabs.barecouch.responses.AuthSession;
+import ca.barelabs.barecouch.responses.DatabaseInfo;
+import ca.barelabs.barecouch.responses.Response;
 
 public class CouchDbClient {
 
