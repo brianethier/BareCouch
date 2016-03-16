@@ -1,6 +1,6 @@
 package ca.barelabs.barecouch;
 
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import ca.barelabs.bareconnection.RestConnection;
-import ca.barelabs.bareconnection.RestException;
 import ca.barelabs.bareconnection.RestUtils;
 
 import com.google.gson.Gson;
@@ -35,34 +34,32 @@ public class ViewQuery {
     public final static String PARAM_GROUP_LEVEL = "group_level";
     public final static String VALUE_STALE_OK = "ok";
     public final static String VALUE_STALE_UPDATE_AFTER = "update_after";
-    public final static String VALUE_TRUE = "true";
-    public final static String VALUE_FALSE = "false";
-    public final static String SEPARATOR = "/";
+    
     private final static int NOT_SET = -1;
 
     private final Gson mGson;
     private final Map<String, String> mQueryParams = new TreeMap<String, String>();
-    private String designDocId;
-    private String viewName;
-    private String listName;
-    private Keys keys = new Keys();
-    private Object key;
-    private Object startKey;
-    private String startDocId;
-    private Object endKey;
-    private String endDocId;
-    private boolean allDocs;
-    private boolean staleOk;
-    private boolean staleOkUpdateAfter;
-    private boolean descending;
-    private boolean group;
-    private boolean reduce = true;
-    private boolean includeDocs = false;
-    private boolean inclusiveEnd = true;
-    private boolean updateSeq = false;
-    private int limit = NOT_SET;
-    private int skip = NOT_SET;
-    private int groupLevel = NOT_SET;
+    private String mDesignDocId;
+    private String mViewName;
+    private String mListName;
+    private Keys mKeys = new Keys();
+    private Object mKey;
+    private Object mStartKey;
+    private String mStartDocId;
+    private Object mEndKey;
+    private String mEndDocId;
+    private boolean mAllDocs;
+    private boolean mStaleOk;
+    private boolean mStaleOkUpdateAfter;
+    private boolean mDescending;
+    private boolean mGroup;
+    private boolean mReduce = true;
+    private boolean mIncludeDocs = false;
+    private boolean mInclusiveEnd = true;
+    private boolean mUpdateSeq = false;
+    private int mLimit = NOT_SET;
+    private int mSkip = NOT_SET;
+    private int mGroupLevel = NOT_SET;
 
     
     /**
@@ -77,376 +74,371 @@ public class ViewQuery {
         this(new Gson());
     }
 
-
     public ViewQuery param(String name, String value) {
         mQueryParams.put(name, value);
         return this;
     }
 
     public String getDesignDocId() {
-        return designDocId;
+        return mDesignDocId;
     }
 
     public ViewQuery designDocId(String designDocId) {
-        this.designDocId = designDocId;
+        this.mDesignDocId = designDocId;
         return this;
     }
 
     public String getViewName() {
-        return viewName;
+        return mViewName;
     }
 
     public ViewQuery viewName(String viewName) {
-        this.viewName = viewName;
+        mViewName = viewName;
         return this;
     }
 
     public String getListName() {
-        return listName;
+        return mListName;
     }
 
     public ViewQuery listName(String listName) {
-        this.listName = listName;
+        mListName = listName;
         return this;
     }
 
     public Keys getKeys() {
-        return keys;
+        return mKeys;
     }
 
     public boolean hasMultipleKeys() {
-        return !keys.getValues().isEmpty();
+        return !mKeys.getValues().isEmpty();
     }
 
     public Collection<?> getKeysValues() {
-        return keys.getValues();
+        return mKeys.getValues();
     }
 
     public String getKeysAsJson() {
-        return mGson.toJson(keys);
+        return mGson.toJson(mKeys);
     }
 
     public ViewQuery keys(Collection<?> keyList) {
-        keys.setValues(keyList);
+        mKeys.setValues(keyList);
         return this;
     }
 
     public Object getKey() {
-        return key;
+        return mKey;
     }
 
     public ViewQuery key(Object object) {
-        this.key = object;
+        mKey = object;
         return this;
     }
 
     public ViewQuery key(String value) {
-        this.key = value;
+        mKey = value;
         return this;
     }
 
     public ViewQuery key(int value) {
-        this.key = value;
+        mKey = value;
         return this;
     }
 
     public ViewQuery key(long value) {
-        this.key = value;
+        mKey = value;
         return this;
     }
     
     public ViewQuery key(float value) {
-        this.key = value;
+        mKey = value;
         return this;
     }
     
     public ViewQuery key(double value) {
-        this.key = value;
+        mKey = value;
         return this;
     }
 
     public ViewQuery key(boolean value) {
-        this.key = value;
+        mKey = value;
         return this;
     }
     
     public ViewQuery keyFromJson(String json, Class<?> clss) {
-        this.key = mGson.fromJson(json, clss);
+        mKey = mGson.fromJson(json, clss);
         return this;
     }
 
     public Object getStartKey() {
-        return startKey;
+        return mStartKey;
     }
 
     public ViewQuery startKey(Object object) {
-        this.startKey = object;
+        mStartKey = object;
         return this;
     }
 
     public ViewQuery startKey(String value) {
-        this.startKey = value;
+        mStartKey = value;
         return this;
     }
 
     public ViewQuery startKey(int value) {
-        this.startKey = value;
+        mStartKey = value;
         return this;
     }
 
     public ViewQuery startKey(long value) {
-        this.startKey = value;
+        mStartKey = value;
         return this;
     }
 
     public ViewQuery startKey(float value) {
-        this.startKey = value;
+        mStartKey = value;
         return this;
     }
 
     public ViewQuery startKey(double value) {
-        this.startKey = value;
+        mStartKey = value;
         return this;
     }
 
     public ViewQuery startKey(boolean value) {
-        this.startKey = value;
+        mStartKey = value;
         return this;
     }
 
     public ViewQuery startKeyFromJson(String json, Class<?> clss) {
-        this.startKey = mGson.fromJson(json, clss);
+        mStartKey = mGson.fromJson(json, clss);
         return this;
     }
 
     public String getStartDocId() {
-        return startDocId;
+        return mStartDocId;
     }
 
     public ViewQuery startDocId(String startDocId) {
-        this.startDocId = startDocId;
+        mStartDocId = startDocId;
         return this;
     }
 
     public Object getEndKey() {
-        return endKey;
+        return mEndKey;
     }
 
     public ViewQuery endKey(Object object) {
-        this.endKey = object;
+        mEndKey = object;
         return this;
     }
     
     public ViewQuery endKey(String value) {
-        this.endKey = value;
+        mEndKey = value;
         return this;
     }
 
     public ViewQuery endKey(int value) {
-        this.endKey = value;
+        mEndKey = value;
         return this;
     }
 
     public ViewQuery endKey(long value) {
-        this.endKey = value;
+        mEndKey = value;
         return this;
     }
 
     public ViewQuery endKey(float value) {
-        this.endKey = value;
+        mEndKey = value;
         return this;
     }
 
     public ViewQuery endKey(double value) {
-        this.endKey = value;
+        mEndKey = value;
         return this;
     }
 
     public ViewQuery endKey(boolean value) {
-        this.endKey = value;
+        mEndKey = value;
         return this;
     }
 
     public ViewQuery endKeyFromJson(String json, Class<?> clss) {
-        this.endKey = mGson.fromJson(json, clss);
+        mEndKey = mGson.fromJson(json, clss);
         return this;
     }
 
     public String getEndDocId() {
-        return endDocId;
+        return mEndDocId;
     }
 
     public ViewQuery endDocId(String endDocId) {
-        this.endDocId = endDocId;
+        mEndDocId = endDocId;
         return this;
     }
     
     public boolean isAllDocs() {
-        return allDocs;
+        return mAllDocs;
     }
     
     public ViewQuery allDocs(boolean allDocs) {
-        this.allDocs = allDocs;
+        mAllDocs = allDocs;
         return this;
     }
 
     public boolean isStaleOk() {
-        return staleOk;
+        return mStaleOk;
     }
 
     public ViewQuery staleOk(boolean staleOk) {
-        this.staleOk = staleOk;
+        mStaleOk = staleOk;
         return this;
     }
 
     public boolean isStaleOkUpdateAfter() {
-        return staleOkUpdateAfter;
+        return mStaleOkUpdateAfter;
     }
 
     public ViewQuery staleOkUpdateAfter(boolean staleOkUpdateAfter) {
-        this.staleOkUpdateAfter = staleOkUpdateAfter;
+        mStaleOkUpdateAfter = staleOkUpdateAfter;
         return this;
     }
 
     public boolean isDescending() {
-        return descending;
+        return mDescending;
     }
 
     public ViewQuery descending(boolean descending) {
-        this.descending = descending;
+        mDescending = descending;
         return this;
     }
 
     public boolean isGroup() {
-        return group;
+        return mGroup;
     }
 
     public ViewQuery group(boolean group) {
-        this.group = group;
+        mGroup = group;
         return this;
     }
 
     public boolean isReduce() {
-        return reduce;
+        return mReduce;
     }
 
     public ViewQuery reduce(boolean reduce) {
-        this.reduce = reduce;
+        mReduce = reduce;
         return this;
     }
 
     public boolean isIncludeDocs() {
-        return includeDocs;
+        return mIncludeDocs;
     }
 
     public ViewQuery includeDocs(boolean includeDocs) {
-        this.includeDocs = includeDocs;
+        mIncludeDocs = includeDocs;
         return this;
     }
 
     public boolean isInclusiveEnd() {
-        return inclusiveEnd;
+        return mInclusiveEnd;
     }
 
     public ViewQuery inclusiveEnd(boolean inclusiveEnd) {
-        this.inclusiveEnd = inclusiveEnd;
+        mInclusiveEnd = inclusiveEnd;
         return this;
     }
 
     public boolean isUpdateSeq() {
-        return updateSeq;
+        return mUpdateSeq;
     }
 
     public ViewQuery updateSeq(boolean updateSeq) {
-        this.updateSeq = updateSeq;
+        mUpdateSeq = updateSeq;
         return this;
     }
 
     public int getLimit() {
-        return limit;
+        return mLimit;
     }
 
     public ViewQuery limit(int limit) {
-        this.limit = limit;
+        mLimit = limit;
         return this;
     } 
 
     public int getSkip() {
-        return skip;
+        return mSkip;
     }
 
     public ViewQuery skip(int skip) {
-        this.skip = skip;
+        mSkip = skip;
         return this;
     }
 
     public int getGroupLevel() {
-        return groupLevel;
+        return mGroupLevel;
     }
 
     public ViewQuery groupLevel(int groupLevel) {
-        this.groupLevel = groupLevel;
+        mGroupLevel = groupLevel;
         return this;
     }
 
-    public String buildQuery() throws RestException {
-        try {
-            Map<String, String> params = createParams();
-            return createViewPath() + "?" + RestUtils.toQuery(params, RestConnection.DEFAULT_CHARSET);
-        } catch (UnsupportedEncodingException e) {
-            throw new RestException(RestConnection.SC_UNKNOWN, e);
-        }
+    public String buildQuery() throws IOException {
+        Map<String, String> params = createParams();
+        return createViewPath() + "?" + RestUtils.toQuery(params, RestConnection.DEFAULT_CHARSET);
     }
 
     private Map<String, String> createParams() {
         HashMap<String, String> params = new HashMap<String, String>();
-        if (key != null) {
-            params.put(PARAM_KEY, mGson.toJson(key));
+        if (mKey != null) {
+            params.put(PARAM_KEY, mGson.toJson(mKey));
         }
-        if (startKey != null) {
-            params.put(PARAM_STARTKEY, mGson.toJson(startKey));
+        if (mStartKey != null) {
+            params.put(PARAM_STARTKEY, mGson.toJson(mStartKey));
         }
-        if (startDocId != null) {
-            params.put(PARAM_STARTKEY_DOCID, startDocId);
+        if (mStartDocId != null) {
+            params.put(PARAM_STARTKEY_DOCID, mStartDocId);
         }
-        if (endKey != null) {
-            params.put(PARAM_ENDKEY, mGson.toJson(endKey));
+        if (mEndKey != null) {
+            params.put(PARAM_ENDKEY, mGson.toJson(mEndKey));
         }
-        if (endDocId != null) {
-            params.put(PARAM_ENDKEY_DOCID, endDocId);
+        if (mEndDocId != null) {
+            params.put(PARAM_ENDKEY_DOCID, mEndDocId);
         }
-        if (staleOk) {
+        if (mStaleOk) {
             params.put(PARAM_STALE, VALUE_STALE_OK);
         }
-        if (staleOkUpdateAfter) {
+        if (mStaleOkUpdateAfter) {
             params.put(PARAM_STALE, VALUE_STALE_UPDATE_AFTER);
         }
-        if (descending) {
-            params.put(PARAM_DESCENDING, VALUE_TRUE);
+        if (mDescending) {
+            params.put(PARAM_DESCENDING, String.valueOf(mDescending));
         }
-        if (!inclusiveEnd) {
-            params.put(PARAM_INCLUSIVE_END, VALUE_FALSE);
+        if (!mInclusiveEnd) {
+            params.put(PARAM_INCLUSIVE_END, String.valueOf(mInclusiveEnd));
         }
-        if (!reduce) {
-            params.put(PARAM_REDUCE, VALUE_FALSE);
+        if (!mReduce) {
+            params.put(PARAM_REDUCE, String.valueOf(mReduce));
         }
-        if (includeDocs) {
-            params.put(PARAM_INCLUDE_DOCS, VALUE_TRUE);
+        if (mIncludeDocs) {
+            params.put(PARAM_INCLUDE_DOCS, String.valueOf(mIncludeDocs));
         }
-        if (group) {
-            params.put(PARAM_GROUP, VALUE_TRUE);
+        if (mGroup) {
+            params.put(PARAM_GROUP, String.valueOf(mGroup));
         }
-        if (updateSeq) {
-            params.put(PARAM_UPDATE_SEQ, VALUE_TRUE);
+        if (mUpdateSeq) {
+            params.put(PARAM_UPDATE_SEQ, String.valueOf(mUpdateSeq));
         }
-        if (limit != NOT_SET) {
-            params.put(PARAM_LIMIT, String.valueOf(limit));
+        if (mLimit != NOT_SET) {
+            params.put(PARAM_LIMIT, String.valueOf(mLimit));
         }
-        if (skip != NOT_SET) {
-            params.put(PARAM_SKIP, String.valueOf(skip));
+        if (mSkip != NOT_SET) {
+            params.put(PARAM_SKIP, String.valueOf(mSkip));
         }
-        if (groupLevel != NOT_SET) {
-            params.put(PARAM_GROUP_LEVEL, String.valueOf(groupLevel));
+        if (mGroupLevel != NOT_SET) {
+            params.put(PARAM_GROUP_LEVEL, String.valueOf(mGroupLevel));
         }
         for (Map.Entry<String, String> param : mQueryParams.entrySet()) {
             params.put(param.getKey(), param.getValue());
@@ -456,25 +448,25 @@ public class ViewQuery {
 
     private String createViewPath() {
         ensureValidViewPath();
-        if (allDocs) {
+        if (mAllDocs) {
             return ALL_DOCS_PATH;
         }
         StringBuilder sb = new StringBuilder();
-        if (listName == null) {
-            sb.append(SEPARATOR).append(designDocId)
-                .append(SEPARATOR).append("_view")
-                .append(SEPARATOR).append(viewName);
+        if (mListName == null) {
+            sb.append(RestConnection.PATH_SEPARATOR).append(mDesignDocId)
+                .append(RestConnection.PATH_SEPARATOR).append("_view")
+                .append(RestConnection.PATH_SEPARATOR).append(mViewName);
         } else {
-            sb.append(SEPARATOR).append(designDocId)
-                .append(SEPARATOR).append("_list")
-                .append(SEPARATOR).append(listName)
-                .append(SEPARATOR).append(viewName);
+            sb.append(RestConnection.PATH_SEPARATOR).append(mDesignDocId)
+                .append(RestConnection.PATH_SEPARATOR).append("_list")
+                .append(RestConnection.PATH_SEPARATOR).append(mListName)
+                .append(RestConnection.PATH_SEPARATOR).append(mViewName);
         }
         return sb.toString();
     }
     
     private void ensureValidViewPath() {
-        if (!allDocs && (designDocId == null || designDocId.length() == 0 || viewName == null || viewName.length() == 0)) {
+        if (!mAllDocs && (mDesignDocId == null || mDesignDocId.length() == 0 || mViewName == null || mViewName.length() == 0)) {
             throw new IllegalStateException("You must call designDocId(...) and viewName(...) with non-empty values.");
         }
     }
