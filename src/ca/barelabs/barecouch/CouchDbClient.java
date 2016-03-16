@@ -23,10 +23,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import ca.barelabs.bareconnection.BackOffPolicy;
+import ca.barelabs.bareconnection.ObjectParser;
 import ca.barelabs.bareconnection.RestConnection;
 import ca.barelabs.bareconnection.RestException;
 import ca.barelabs.bareconnection.RestProperties;
 import ca.barelabs.bareconnection.RestResponse;
+import ca.barelabs.bareconnection.RestUtils;
 
 public class CouchDbClient {
 
@@ -38,16 +41,50 @@ public class CouchDbClient {
     public static final String SESSION_PATH = "_session";
 
     private final RestProperties mProperties;
+    private ObjectParser mParser;
+    private int mMaxRetryAttempts = RestConnection.DEFAULT_MAX_RETRY_ATTEMPTS;
+    private boolean mRetryOnIOException;
+    private BackOffPolicy mBackOffPolicy;
 
 
     public CouchDbClient(RestProperties properties) {
         mProperties = properties;
     }
+
+    public ObjectParser getParser() {
+		return mParser;
+	}
+
+	public void setParser(ObjectParser parser) {
+		mParser = parser;
+	}
+
+    public int getMaxRetryAttempts() {
+        return mMaxRetryAttempts;
+    }
+
+    public void setMaxRetryAttempts(int maxRetryAttempts) {
+        mMaxRetryAttempts = maxRetryAttempts;
+    }
     
-    public List<String> getUUIDs(int count) throws IOException {
-        RestConnection connection = new RestConnection.Builder()
-            .properties(mProperties)
-            .path(UUIDS_PATH)
+    public boolean isRetryOnIOException() {
+        return mRetryOnIOException;
+    }
+    
+    public void setRetryOnIOException(boolean retryOnIOException) {
+        mRetryOnIOException = retryOnIOException;
+    }
+    
+    public BackOffPolicy getBackOffPolicy() {
+        return mBackOffPolicy;
+    }
+    
+    public void setBackOffPolicy(BackOffPolicy backOffPolicy) {
+        mBackOffPolicy = backOffPolicy;
+    }
+
+	public List<String> getUUIDs(int count) throws IOException {
+        RestConnection connection = newConnectionBuilder(UUIDS_PATH)
             .param(COUNT_PARAM, String.valueOf(count))
             .build();
         return connection.get().parseAs(UUIDList.class).uuids;
@@ -58,18 +95,12 @@ public class CouchDbClient {
     }
 
     public <D> D getSession(Class<D> clss) throws IOException {
-        RestConnection connection = new RestConnection.Builder()
-            .properties(mProperties)
-            .path(SESSION_PATH)
-            .build();
+        RestConnection connection = createConnection(SESSION_PATH);
         return connection.get().parseAs(clss);
     }
     
     public List<String> getAllDatabases() throws IOException {
-        RestConnection connection = new RestConnection.Builder()
-            .properties(mProperties)
-            .path(ALL_DBS_PATH)
-            .build();
+        RestConnection connection = createConnection(ALL_DBS_PATH);
         return connection.get().parseAsList(String.class);
     }
     
@@ -251,9 +282,7 @@ public class CouchDbClient {
         ensureDocumentId(docId);
         HashMap<String, String> params = new HashMap<String, String>();
         params.put(REVISION_PARAM, rev);
-        RestConnection connection = new RestConnection.Builder()
-            .properties(mProperties)
-            .path(database + RestConnection.PATH_SEPARATOR + docId)
+        RestConnection connection = newConnectionBuilder(database, docId)
             .params(params)
             .build();
         return connection.delete().parseAs(responseClss);
@@ -273,10 +302,7 @@ public class CouchDbClient {
     
     public ViewResult queryView(String database, ViewQuery query) throws IOException {
         ensureDatabase(database);
-        RestConnection connection = new RestConnection.Builder()
-            .properties(mProperties)
-            .path(database + query.buildQuery())
-            .build();
+        RestConnection connection = createConnection(database + query.buildQuery());
         if (query.hasMultipleKeys()) {
             String keysAsJson = query.getKeysAsJson();
             return new ViewResult(connection.post(keysAsJson).parse());
@@ -287,10 +313,7 @@ public class CouchDbClient {
     
     public StreamingViewResult queryForStreamingView(String database, ViewQuery query) throws IOException {
         ensureDatabase(database);
-        RestConnection connection = new RestConnection.Builder()
-            .properties(mProperties)
-            .path(database + query.buildQuery())
-            .build();
+        RestConnection connection = createConnection(database + query.buildQuery());
         if (query.hasMultipleKeys()) {
             String keysAsJson = query.getKeysAsJson();
             return new StreamingViewResult(connection.post(keysAsJson));
@@ -299,15 +322,18 @@ public class CouchDbClient {
         }
     }
     
-    private RestConnection createConnection(String database) throws IOException {
-        return createConnection(database, null);
+    private RestConnection createConnection(String... paths) throws IOException {
+        return newConnectionBuilder(paths).build();
     }
     
-    private RestConnection createConnection(String database, String docId) throws IOException {
-        return new RestConnection.Builder()
+    private RestConnection.Builder newConnectionBuilder(String... paths) throws IOException {
+    	return new RestConnection.Builder()
             .properties(mProperties)
-            .path(docId == null ? database : database + RestConnection.PATH_SEPARATOR + docId)
-            .build();
+            .parser(mParser)
+            .maxRetryAttempts(mMaxRetryAttempts)
+            .retryOnIOException(mRetryOnIOException)
+            .backOffPolicy(mBackOffPolicy)
+            .path(RestUtils.toPath(paths));
     }
     
     private void ensureDatabase(String database) throws IOException {
@@ -325,5 +351,94 @@ public class CouchDbClient {
     
     public static class UUIDList {
     	private List<String> uuids;
+    }
+    
+    
+    public static final class Builder {
+
+        private ObjectParser mParser;
+        private int mMaxRetryAttempts = RestConnection.DEFAULT_MAX_RETRY_ATTEMPTS;
+        private boolean mRetryOnIOException;
+        private BackOffPolicy mBackOffPolicy;
+        private RestProperties.Builder mPropertiesBuilder = new RestProperties.Builder();
+
+        
+        public Builder parser(ObjectParser parser) {
+            mParser = parser;
+            return this;    
+        }
+        
+        public Builder maxRetryAttempts(int maxRetryAttempts) {
+            mMaxRetryAttempts = maxRetryAttempts;
+            return this;    
+        }
+        
+        public Builder retryOnIOException(boolean retryOnIOException) {
+            mRetryOnIOException = retryOnIOException;
+            return this;    
+        }
+        
+        public Builder backOffPolicy(BackOffPolicy backOffPolicy) {
+            mBackOffPolicy = backOffPolicy;
+            return this;    
+        }
+        
+        public Builder url(String url) {
+            mPropertiesBuilder.url(url);
+            return this;    
+        }
+        
+        public Builder path(String path) {
+            mPropertiesBuilder.path(path);
+            return this;    
+        }
+        
+        public Builder username(String username) {
+            mPropertiesBuilder.username(username);
+            return this;    
+        }
+        
+        public Builder password(String password) {
+            mPropertiesBuilder.password(password);
+            return this;    
+        }
+        
+        public Builder connectTimeout(int connectTimeout) {
+            mPropertiesBuilder.connectTimeout(connectTimeout);
+            return this;    
+        }
+        
+        public Builder readTimeout(int readTimeout) {
+            mPropertiesBuilder.readTimeout(readTimeout);
+            return this;    
+        }
+        
+        public Builder followRedirects(boolean followRedirects) {
+            mPropertiesBuilder.followRedirects(followRedirects);
+            return this;    
+        }
+        
+        public Builder properties(RestProperties properties) {
+            if (properties != null) {
+                mPropertiesBuilder
+                    .url(properties.getUrl())
+                    .path(properties.getPath())
+                    .username(properties.getUsername())
+                    .password(properties.getPassword())
+                    .connectTimeout(properties.getConnectTimeout())
+                    .readTimeout(properties.getReadTimeout());
+            }
+            return this;    
+        }
+        
+        public CouchDbClient build() {
+            RestProperties properties = mPropertiesBuilder.build();
+        	CouchDbClient client = new CouchDbClient(properties);
+        	client.mParser = mParser;
+        	client.mMaxRetryAttempts = mMaxRetryAttempts;
+        	client.mBackOffPolicy = mBackOffPolicy;
+        	client.mRetryOnIOException = mRetryOnIOException;
+        	return client;
+        }
     }
 }
