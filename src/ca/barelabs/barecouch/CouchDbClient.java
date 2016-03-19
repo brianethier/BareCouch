@@ -331,6 +331,12 @@ public class CouchDbClient {
         return new ChangesResult(connection.get().parse());
     }
     
+    public StreamingChangesResult queryForStreamingChanges(String database, ChangesQuery query) throws IOException {
+        ensureDatabase(database);
+        RestConnection connection = createConnection(database + query.buildQuery());
+        return new StreamingChangesResult(connection.get());
+    }
+    
     private RestConnection createConnection(String... paths) throws IOException {
         return newConnectionBuilder(paths).build();
     }
