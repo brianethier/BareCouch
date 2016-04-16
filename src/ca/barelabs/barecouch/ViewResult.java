@@ -6,9 +6,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import ca.barelabs.bareconnection.GsonParser;
+import ca.barelabs.bareconnection.ObjectParser;
 import ca.barelabs.bareconnection.IOUtils;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -22,13 +23,15 @@ public class ViewResult implements Iterable<ViewResult.Row> {
     public static final String FIELD_ROWS = "rows";
     public static final String FIELD_UPDATE_SEQ = "update_seq";
 
+    private final ObjectParser mParser;
     private long mOffset;
     private long mTotalRows;
     private String mUpdateSeq;
     private List<Row> mRows = new ArrayList<Row>();
     
 
-    public ViewResult(String result) {
+    public ViewResult(ObjectParser parser, String result) {
+        mParser = parser;
         parseMetadata(result);
     }
     
@@ -78,7 +81,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
                     jsonReader.beginArray();
                     while(jsonReader.hasNext()) {
                         JsonElement jsonElement = jsonParser.parse(jsonReader);
-                        mRows.add(new Row(jsonElement.getAsJsonObject()));
+                        mRows.add(new Row(mParser, jsonElement.getAsJsonObject()));
                     }
                     jsonReader.endArray();
                 } else {
@@ -104,11 +107,12 @@ public class ViewResult implements Iterable<ViewResult.Row> {
         public static final String FIELD_DOC = "doc";
         public static final String FIELD_ERROR = "error";
 
-        private Gson mGson = new Gson();;
-        private JsonObject mJsonObject;
+        private final ObjectParser mParser;
+        private final JsonObject mJsonObject;
         
         
-        public Row(JsonObject jsonObject) {
+        public Row(ObjectParser parser, JsonObject jsonObject) {
+            mParser = parser;
             mJsonObject = jsonObject;
         }
 
@@ -121,7 +125,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return getAsJsonElement(FIELD_ID);
         }
 
-        public <T> T getIdAsObject(Class<T> clss) {
+        public <T> T getIdAsObject(Class<T> clss) throws IOException {
             return getAsObject(FIELD_ID, clss);
         }
 
@@ -133,7 +137,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return getAsJsonElement(FIELD_KEY);
         }
 
-        public <T> T getKeyAsObject(Class<T> clss) {
+        public <T> T getKeyAsObject(Class<T> clss) throws IOException {
             return getAsObject(FIELD_KEY, clss);
         }
 
@@ -145,7 +149,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return getAsJsonElement(FIELD_VALUE);
         }
 
-        public <T> T getValueAsObject(Class<T> clss) {
+        public <T> T getValueAsObject(Class<T> clss) throws IOException {
             return getAsObject(FIELD_VALUE, clss);
         }
 
@@ -157,7 +161,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return getAsJsonElement(FIELD_DOC);
         }
 
-        public <T> T getDocAsObject(Class<T> clss) {
+        public <T> T getDocAsObject(Class<T> clss) throws IOException {
             return getAsObject(FIELD_DOC, clss);
         }
 
@@ -169,7 +173,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return mJsonObject.get(FIELD_ERROR);
         }
 
-        public <T> T getErrorAsObject(Class<T> clss) {
+        public <T> T getErrorAsObject(Class<T> clss) throws IOException {
             return getAsObject(FIELD_ERROR, clss);
         }
         
@@ -182,9 +186,16 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             return mJsonObject.get(field);
         }
         
-        private <T> T getAsObject(String field, Class<T> clss) {
+        private <T> T getAsObject(String field, Class<T> clss) throws IOException {
             JsonElement element = mJsonObject.get(field);
-            return element == null ? null : mGson.fromJson(element, clss);
+            if (element == null) {
+            	return null;
+            }
+            if (mParser instanceof GsonParser) {
+                return ((GsonParser) mParser).parse(element, clss);
+            } else {
+                return mParser.parse(element.toString(), clss);
+            }
         }
 
         @Override

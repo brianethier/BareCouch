@@ -308,9 +308,9 @@ public class CouchDbClient {
         RestConnection connection = createConnection(database + query.buildQuery());
         if (query.hasMultipleKeys()) {
             String keysAsJson = query.getKeysAsJson();
-            return new ViewResult(connection.post(keysAsJson).parse());
+            return new ViewResult(connection.getParser(), connection.post(keysAsJson).parse());
         } else {
-            return new ViewResult(connection.get().parse());
+            return new ViewResult(connection.getParser(), connection.get().parse());
         }
     }
     
@@ -319,9 +319,9 @@ public class CouchDbClient {
         RestConnection connection = createConnection(database + query.buildQuery());
         if (query.hasMultipleKeys()) {
             String keysAsJson = query.getKeysAsJson();
-            return new StreamingViewResult(connection.post(keysAsJson));
+            return new StreamingViewResult(connection.getParser(), connection.post(keysAsJson));
         } else {
-            return new StreamingViewResult(connection.get());
+            return new StreamingViewResult(connection.getParser(), connection.get());
         }
     }
     

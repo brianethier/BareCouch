@@ -7,6 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import ca.barelabs.bareconnection.ObjectParser;
 import ca.barelabs.bareconnection.RestResponse;
 import ca.barelabs.barecouch.ViewResult.Row;
 
@@ -16,6 +17,7 @@ import com.google.gson.stream.JsonReader;
 
 public class StreamingViewResult implements Closeable {
 
+    private final ObjectParser mParser;
     private final RestResponse mResponse;
     private final JsonParser mJsonParser = new JsonParser();
     private final JsonReader mJsonReader;
@@ -26,7 +28,8 @@ public class StreamingViewResult implements Closeable {
     private boolean mClosed;
     
 
-    public StreamingViewResult(RestResponse response) throws UnsupportedEncodingException, IOException {
+    public StreamingViewResult(ObjectParser parser, RestResponse response) throws UnsupportedEncodingException, IOException {
+        mParser = parser;
         mResponse = response;
         mJsonReader = new JsonReader(new InputStreamReader(mResponse.getContent(), mResponse.getIncomingCharset()));
         parseMetadata(mJsonReader);
@@ -82,7 +85,7 @@ public class StreamingViewResult implements Closeable {
                 }
             }
         }
-        catch(IOException e) {
+        catch (IOException e) {
             throw new DatabaseAccessException(e);
         }
     }
@@ -99,11 +102,11 @@ public class StreamingViewResult implements Closeable {
         }
 
         public Row next() {
-            if(!hasNext()) {
+            if (!hasNext()) {
                 throw new NoSuchElementException("Attempt to iterate beyond the result set.");
             }
             JsonElement jsonElement = mJsonParser.parse(mJsonReader);
-            return new Row(jsonElement.getAsJsonObject());
+            return new Row(mParser, jsonElement.getAsJsonObject());
         }
         
         public void remove() {
