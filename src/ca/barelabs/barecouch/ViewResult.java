@@ -76,7 +76,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
                 } else if (name.equals(FIELD_TOTAL_ROWS)) {
                     mTotalRows = jsonReader.nextLong();
                 } else if (name.equals(FIELD_UPDATE_SEQ)) {
-                    mUpdateSeq = Long.toString(jsonReader.nextLong());
+                    mUpdateSeq = jsonReader.nextString();
                 } else if (name.equals(FIELD_ROWS)) {
                     jsonReader.beginArray();
                     while(jsonReader.hasNext()) {

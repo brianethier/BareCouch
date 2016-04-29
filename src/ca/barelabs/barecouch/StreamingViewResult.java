@@ -75,7 +75,7 @@ public class StreamingViewResult implements Closeable {
                 } else if (name.equals(ViewResult.FIELD_TOTAL_ROWS)) {
                     mTotalRows = jsonReader.nextLong();
                 } else if (name.equals(ViewResult.FIELD_UPDATE_SEQ)) {
-                    mUpdateSeq = Long.toString(jsonReader.nextLong());
+                    mUpdateSeq = jsonReader.nextString();
                 } else if (name.equals(ViewResult.FIELD_ROWS)) {
                     jsonReader.beginArray();
                     // We are now ready to start reading rows

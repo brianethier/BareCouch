@@ -7,6 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import ca.barelabs.bareconnection.ObjectParser;
 import ca.barelabs.bareconnection.RestResponse;
 import ca.barelabs.barecouch.ChangesResult.DocumentChange;
 
@@ -16,6 +17,7 @@ import com.google.gson.stream.JsonReader;
 
 public class StreamingChangesResult implements Closeable {
 
+    private final ObjectParser mParser;
     private final RestResponse mResponse;
     private final JsonParser mJsonParser = new JsonParser();
     private final JsonReader mJsonReader;
@@ -25,7 +27,8 @@ public class StreamingChangesResult implements Closeable {
     private boolean mAllChangesRead;
     
 
-    public StreamingChangesResult(RestResponse response) throws UnsupportedEncodingException, IOException {
+    public StreamingChangesResult(ObjectParser parser, RestResponse response) throws UnsupportedEncodingException, IOException {
+        mParser = parser;
         mResponse = response;
         mJsonReader = new JsonReader(new InputStreamReader(mResponse.getContent(), mResponse.getIncomingCharset()));
         parseMetadata(mJsonReader);
@@ -115,7 +118,7 @@ public class StreamingChangesResult implements Closeable {
                 throw new NoSuchElementException("Attempt to iterate beyond the result set.");
             }
             JsonElement jsonElement = mJsonParser.parse(mJsonReader);
-            return new DocumentChange(jsonElement.getAsJsonObject());
+            return new DocumentChange(mParser, jsonElement.getAsJsonObject());
         }
         
         public void remove() {

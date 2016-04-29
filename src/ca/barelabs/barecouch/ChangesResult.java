@@ -6,9 +6,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import ca.barelabs.bareconnection.GsonParser;
 import ca.barelabs.bareconnection.IOUtils;
+import ca.barelabs.bareconnection.ObjectParser;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -20,11 +21,13 @@ public class ChangesResult implements Iterable<ChangesResult.DocumentChange> {
     public static final String FIELD_RESULTS = "results";
     public static final String FIELD_LAST_SEQ = "last_seq";
 
+    private final ObjectParser mParser;
     private List<DocumentChange> mChanges = new ArrayList<>();
     private String mLastSeq;
     
 
-    public ChangesResult(String result) {
+    public ChangesResult(ObjectParser parser, String result) {
+        mParser = parser;
         parseMetadata(result);
     }
     
@@ -59,7 +62,7 @@ public class ChangesResult implements Iterable<ChangesResult.DocumentChange> {
                     jsonReader.beginArray();
                     while(jsonReader.hasNext()) {
                         JsonElement jsonElement = jsonParser.parse(jsonReader);
-                        mChanges.add(new DocumentChange(jsonElement.getAsJsonObject()));
+                        mChanges.add(new DocumentChange(mParser, jsonElement.getAsJsonObject()));
                     }
                     jsonReader.endArray();
                 } else if (name.equals(FIELD_LAST_SEQ)) {
@@ -85,11 +88,12 @@ public class ChangesResult implements Iterable<ChangesResult.DocumentChange> {
         public static final String FIELD_DELETED = "deleted";
         public static final String FIELD_DOC = "doc";
 
-        private Gson mGson = new Gson();;
+        private final ObjectParser mParser;
         private JsonObject mJsonObject;
         
         
-        public DocumentChange(JsonObject jsonObject) {
+        public DocumentChange(ObjectParser parser, JsonObject jsonObject) {
+            mParser = parser;
             mJsonObject = jsonObject;
         }
 
@@ -105,7 +109,7 @@ public class ChangesResult implements Iterable<ChangesResult.DocumentChange> {
             return mJsonObject.get(FIELD_ID).getAsString();
         }
 
-        public List<String> getChanges() {
+        public List<String> getChanges() throws IOException {
         	List<String> changeRevs = new ArrayList<>();
         	for (ChangeReference ref : getChangesAsReferences()) {
         		changeRevs.add(ref.getRev());
@@ -113,15 +117,15 @@ public class ChangesResult implements Iterable<ChangesResult.DocumentChange> {
             return changeRevs;
         }
 
-        public List<ChangeReference> getChangesAsReferences() {
+        public List<ChangeReference> getChangesAsReferences() throws IOException {
             return getChangesAs(ChangeReference.class);
         }
 
-        public <T> List<T> getChangesAs(Class<T> clss) {
+        public <T> List<T> getChangesAs(Class<T> clss) throws IOException {
         	List<T> changeRefs = new ArrayList<>();
             JsonArray array = mJsonObject.get(FIELD_CHANGES).getAsJsonArray();
             for (int i = 0; i < array.size(); i++) {
-            	T changeRef = mGson.fromJson(array.get(i), clss);
+            	T changeRef = getAsObject(array.get(i), clss);
             	changeRefs.add(changeRef);
             }
             return changeRefs;
@@ -141,9 +145,19 @@ public class ChangesResult implements Iterable<ChangesResult.DocumentChange> {
             return mJsonObject.get(FIELD_DOC);
         }
 
-        public <T> T getDocAsObject(Class<T> clss) {
-            JsonElement element =  mJsonObject.get(FIELD_DOC);
-            return element == null ? null : mGson.fromJson(element, clss);
+        public <T> T getDocAsObject(Class<T> clss) throws IOException {
+            return getAsObject(getDocAsJsonElement(), clss);
+        }
+        
+        private <T> T getAsObject(JsonElement element, Class<T> clss) throws IOException {
+            if (element == null) {
+            	return null;
+            }
+            if (mParser instanceof GsonParser) {
+                return ((GsonParser) mParser).parse(element, clss);
+            } else {
+                return mParser.parse(element.toString(), clss);
+            }
         }
 
         @Override
