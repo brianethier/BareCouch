@@ -42,6 +42,7 @@ public class CouchDbClient {
     public static final String ALL_DBS_PATH = "_all_dbs";
     public static final String UUIDS_PATH = "_uuids";
     public static final String SESSION_PATH = "_session";
+    public static final String BULK_DOCS_PATH = "_bulk_docs";
 
     private final RestProperties mProperties;
     private ObjectParser mParser;
@@ -290,7 +291,19 @@ public class CouchDbClient {
             .build();
         return connection.delete().parseAs(responseClss);
     }
-    
+
+    public <D> D bulkUpdate(String database, List<?> objects, Class<D> responseClss) throws IOException {
+        return bulkUpdate(database, objects).parseAs(responseClss);
+    }
+
+    public RestResponse bulkUpdate(String database, List<?> objects) throws IOException {
+        ensureDatabase(database);
+        DocumentBulkRequest request = new DocumentBulkRequest();
+        request.setDocs(objects);
+        RestConnection connection = newConnectionBuilder(database, BULK_DOCS_PATH)
+            .build();
+        return connection.post(request);
+    }
     
     public <T> List<T> queryView(String database, ViewQuery query, Class<T> clss) throws IOException {
         ViewResult result = queryView(database, query);
