@@ -1,19 +1,10 @@
 package ca.barelabs.barecouch.responses;
 
 
-public class AuthSession {
+public class SessionResponse extends Response {
 
-    private boolean ok;
     private UserCtx userCtx;
     private AuthInfo info;
-
-    public boolean isOk() {
-        return ok;
-    }
-
-    public void setOk(boolean ok) {
-        this.ok = ok;
-    }
 
     public UserCtx getUserCtx() {
         return userCtx;

@@ -17,6 +17,7 @@ import com.google.gson.stream.JsonReader;
 
 public class StreamingViewResult implements Closeable {
 
+    private final ViewQuery mQuery;
     private final ObjectParser mParser;
     private final RestResponse mResponse;
     private final JsonParser mJsonParser = new JsonParser();
@@ -28,13 +29,21 @@ public class StreamingViewResult implements Closeable {
     private boolean mClosed;
     
 
-    public StreamingViewResult(ObjectParser parser, RestResponse response) throws UnsupportedEncodingException, IOException {
-        mParser = parser;
+    public StreamingViewResult(ViewQuery query, RestResponse response) throws UnsupportedEncodingException, IOException {
+    	mQuery = query;
+        mParser = response.getParser();
         mResponse = response;
         mJsonReader = new JsonReader(new InputStreamReader(mResponse.getContent(), mResponse.getIncomingCharset()));
         parseMetadata(mJsonReader);
     }
     
+    public ViewQuery getQuery() {
+    	return mQuery;
+    }
+    
+    public ObjectParser getParser() {
+    	return mParser;
+    }
 
     public long getOffset() {
         return mOffset;

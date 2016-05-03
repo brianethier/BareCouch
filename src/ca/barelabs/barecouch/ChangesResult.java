@@ -9,6 +9,7 @@ import java.util.List;
 import ca.barelabs.bareconnection.GsonParser;
 import ca.barelabs.bareconnection.IOUtils;
 import ca.barelabs.bareconnection.ObjectParser;
+import ca.barelabs.bareconnection.RestResponse;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -21,17 +22,27 @@ public class ChangesResult implements Iterable<ChangesResult.DocumentChange> {
     public static final String FIELD_RESULTS = "results";
     public static final String FIELD_LAST_SEQ = "last_seq";
 
+    private final ChangesQuery mQuery;
     private final ObjectParser mParser;
     private List<DocumentChange> mChanges = new ArrayList<>();
     private String mLastSeq;
     
 
-    public ChangesResult(ObjectParser parser, String result) {
-        mParser = parser;
-        parseMetadata(result);
+    public ChangesResult(ChangesQuery query, RestResponse response) throws IOException {
+    	mQuery = query;
+        mParser = response.getParser();
+        parseMetadata(response.parse());
     }
-    
-    public List<DocumentChange> getChanges() {
+
+    public ChangesQuery getQuery() {
+		return mQuery;
+	}
+
+	public ObjectParser getParser() {
+		return mParser;
+	}
+
+	public List<DocumentChange> getChanges() {
         return mChanges;
     }
 

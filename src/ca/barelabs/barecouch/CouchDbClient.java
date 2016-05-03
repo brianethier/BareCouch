@@ -17,10 +17,6 @@ package ca.barelabs.barecouch;
 
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 
 import ca.barelabs.bareconnection.BackOffPolicy;
@@ -30,9 +26,11 @@ import ca.barelabs.bareconnection.RestException;
 import ca.barelabs.bareconnection.RestProperties;
 import ca.barelabs.bareconnection.RestResponse;
 import ca.barelabs.bareconnection.RestUtils;
-import ca.barelabs.barecouch.responses.AuthSession;
+import ca.barelabs.barecouch.responses.SessionResponse;
 import ca.barelabs.barecouch.responses.DatabaseInfo;
+import ca.barelabs.barecouch.responses.DocumentResponse;
 import ca.barelabs.barecouch.responses.Response;
+import ca.barelabs.barecouch.responses.UuidList;
 
 public class CouchDbClient {
 
@@ -87,75 +85,33 @@ public class CouchDbClient {
         mBackOffPolicy = backOffPolicy;
     }
 
-	public List<String> getUUIDs(int count) throws IOException {
-        RestConnection connection = newConnectionBuilder(UUIDS_PATH)
-            .param(COUNT_PARAM, String.valueOf(count))
-            .build();
-        return connection.get().parseAs(UUIDList.class).uuids;
+	public UuidList getUuidList(int count) throws IOException {
+        return executeUuidList(count).parseAs(UuidList.class);
     }
 
-    public AuthSession getSession() throws IOException {
-        return getSession(AuthSession.class);
+    public SessionResponse getSession() throws IOException {
+        return executeSessionGet().parseAs(SessionResponse.class);
     }
 
     public <D> D getSession(Class<D> clss) throws IOException {
-        RestConnection connection = createConnection(SESSION_PATH);
-        return connection.get().parseAs(clss);
+        return executeSessionGet().parseAs(clss);
     }
     
     public List<String> getAllDatabases() throws IOException {
-        RestConnection connection = createConnection(ALL_DBS_PATH);
-        return connection.get().parseAsList(String.class);
-    }
-    
-    public boolean createDatabase(String database) throws IOException {
-        ensureDatabase(database);
-    	try {
-    		RestConnection connection = createConnection(database);
-			connection.put();
-			return true;
-		} catch (RestException e) {
-			// CouchDb returns a 412 Precondition Failed if database already exists
-			if (e.getStatusCode() == RestConnection.SC_PRECON_FAILED) {
-				return false;
-			}
-			throw e;
-		}
-    }
-
-    public Response deleteDatabase(String database) throws IOException {
-        return deleteDatabase(database, Response.class);
-    }
-
-    public <R> R deleteDatabase(String database, Class<R> clss) throws IOException {
-        ensureDatabase(database);
-		try {
-			RestConnection connection = createConnection(database);
-			return connection.delete().parseAs(clss);
-		} catch (RestException e) {
-			// CouchDb returns a 404 Not Found if database doesn't exist
-			if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
-				return null;
-			}
-			throw e;
-		}
+        return executeAllDatabasesGet().parseAsList(String.class);
     }
     
     public DatabaseInfo getDatabaseInfo(String database) throws IOException {
-		return getDatabaseInfo(database, DatabaseInfo.class);
+        return executeDatabaseGet(database).parseAs(DatabaseInfo.class);
     }
     
     public <R> R getDatabaseInfo(String database, Class<R> clss) throws IOException {
-        ensureDatabase(database);
-        RestConnection connection = createConnection(database);
-        return connection.get().parseAs(clss);
+        return executeDatabaseGet(database).parseAs(clss);
     }
     
     public boolean exists(String database) throws IOException {
-        ensureDatabase(database);
 		try {
-    		RestConnection connection = createConnection(database);
-			connection.head().parse();
+			executeDatabaseHead(database).parse();
 			return true;
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't exists
@@ -165,12 +121,34 @@ public class CouchDbClient {
 			throw e;
 		}
     }
+    
+    public boolean createDatabase(String database) throws IOException {
+    	try {
+			return executeDatabasePut(database).parseAs(Response.class).isOk();
+		} catch (RestException e) {
+			// CouchDb returns a 412 Precondition Failed if database already exists
+			if (e.getStatusCode() == RestConnection.SC_PRECON_FAILED) {
+				return false;
+			}
+			throw e;
+		}
+    }
+
+    public boolean deleteDatabase(String database) throws IOException {
+		try {
+			return executeDatabaseDelete(database).parseAs(Response.class).isOk();
+		} catch (RestException e) {
+			// CouchDb returns a 404 Not Found if database doesn't exist
+			if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
+				return false;
+			}
+			throw e;
+		}
+    }
 
     public boolean contains(String database, String docId) throws IOException {
-        ensureDatabase(database);
 		try {
-    		RestConnection connection = createConnection(database, docId);
-			connection.head().parse();
+			executeDocumentHead(database, docId).parse();
 			return true;
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
@@ -182,11 +160,9 @@ public class CouchDbClient {
     }
 
     public boolean containsAsLatest(String database, String docId, String revId) throws IOException {
-        ensureDatabase(database);
         try {
-            RestConnection connection = createConnection(database, docId);            
-            RestResponse response = connection.head();
-            response.parse();
+        	RestResponse response = executeDocumentHead(database, docId);
+        	response.parse();
             String etag = response.getConnection().getHeaderField(ETAG_FIELD);
             return revId != null && etag != null && revId.equals(etag);
         } catch (RestException e) {
@@ -199,10 +175,8 @@ public class CouchDbClient {
     }
 
     public <D> D get(String database, String docId, Class<D> documentClss) throws IOException {
-        ensureDatabase(database);
     	try {
-    		RestConnection connection = createConnection(database, docId);
-			return connection.get().parseAs(documentClss);
+        	return executeDocumentGet(database, docId).parseAs(documentClss);
 		} catch (RestException e) {
 			// CouchDb returns a 404 Not Found if database doesn't contain document
 			if (e.getStatusCode() == RestConnection.SC_NOT_FOUND) {
@@ -213,141 +187,195 @@ public class CouchDbClient {
     }
 
     public <D> D find(String database, String docId, Class<D> documentClss) throws IOException {
-        ensureDatabase(database);
-		RestConnection connection = createConnection(database, docId);
-		return connection.get().parseAs(documentClss);
+		return executeDocumentGet(database, docId).parseAs(documentClss);
     }
 
-    public Response create(String database, Object document) throws IOException {
-        Response response = create(database, document, Response.class);
-        DocumentUtils.setId(document, response.getId());
-        DocumentUtils.setRev(document, response.getRev());
-        return response;
+    public DocumentResponse create(String database, Object document) throws IOException {
+        return create(database, document, DocumentResponse.class);
     }
 
     public <D> D create(String database, Object document, Class<D> responseClss) throws IOException {
-        ensureDatabase(database);
-        RestConnection connection = createConnection(database);
-        return connection.post(document).parseAs(responseClss);
+    	String docId = DocumentUtils.getId(document);
+        return create(database, docId, document, responseClss);
     }
 
-    public Response create(String database, String docId, InputStream in) throws IOException {
-        return create(database, docId, in, Response.class);
+    public DocumentResponse create(String database, String docId, Object document) throws IOException {
+        return create(database, docId, document, DocumentResponse.class);
     }
 
-    public <D> D create(String database, String docId, InputStream in, Class<D> responseClss) throws IOException {
-        ensureDatabase(database);
-        ensureDocumentId(docId);
-        RestConnection connection = createConnection(database, docId);
-        return connection.put(in).parseAs(responseClss);
+    public <D> D create(String database, String docId, Object document, Class<D> responseClss) throws IOException {
+    	RestResponse response = docId == null ? executeDocumentPost(database, document) : executeDocumentPut(database, docId, document);
+	    D documentResponse = response.parseAs(responseClss);
+	    DocumentUtils.setId(document, DocumentUtils.getId(documentResponse));
+	    DocumentUtils.setRev(document, DocumentUtils.getRev(documentResponse));
+	    return documentResponse;
     }
 
-    public Response update(String database, Object document) throws IOException {
-        Response response = update(database, document, Response.class);
-		DocumentUtils.setRev(document, response.getRev());
-		return response;
+    public DocumentResponse update(String database, Object document) throws IOException {
+        return update(database, DocumentUtils.getId(document), document, DocumentResponse.class);
     }
 
     public <D> D update(String database, Object document, Class<D> responseClss) throws IOException {
-        ensureDatabase(database);
-        ensureDocumentId(DocumentUtils.getId(document));
-        RestConnection connection = createConnection(database, DocumentUtils.getId(document));
-        return connection.put(document).parseAs(responseClss);
+        return update(database, DocumentUtils.getId(document), document, responseClss);
     }
 
-    public Response update(String database, String docId, InputStream in) throws IOException {
-        return update(database, docId, in, Response.class);
+    public DocumentResponse update(String database, String docId, Object document) throws IOException {
+        return update(database, docId, document, DocumentResponse.class);
     }
 
-    public <D> D update(String database, String docId, InputStream in, Class<D> responseClss) throws IOException {
-        ensureDatabase(database);
-        ensureDocumentId(docId);
-        RestConnection connection = createConnection(database, docId);
-        return connection.put(in).parseAs(responseClss);
+    public <D> D update(String database, String docId, Object document, Class<D> responseClss) throws IOException {
+    	RestResponse response = executeDocumentPut(database, docId, document);
+	    D documentResponse = response.parseAs(responseClss);
+	    DocumentUtils.setRev(document, DocumentUtils.getRev(documentResponse));
+	    return documentResponse;
     }
 
-    public Response delete(String database, Object document) throws IOException {
-        ensureDatabase(database);
-        Response response = delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document), Response.class);
-        DocumentUtils.setRev(document, response.getRev());
-        return response;
+    public DocumentResponse delete(String database, Object document) throws IOException {
+        return delete(database, document, DocumentResponse.class);
     }
 
     public <D> D delete(String database, Object document, Class<D> responseClss) throws IOException {
-        return delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document), responseClss);
+    	D documentResponse = delete(database, DocumentUtils.getId(document), DocumentUtils.getRev(document), responseClss);
+	    DocumentUtils.setRev(document, DocumentUtils.getRev(documentResponse));
+        return documentResponse;
     }
     
-    public Response delete(String database, String docId, String rev) throws IOException {
-        return delete(database, docId, rev, Response.class);
+    public DocumentResponse delete(String database, String docId, String rev) throws IOException {
+        return delete(database, docId, rev, DocumentResponse.class);
     }
     
     public <D> D delete(String database, String docId, String rev, Class<D> responseClss) throws IOException {
-        ensureDatabase(database);
-        ensureDocumentId(docId);
-        HashMap<String, String> params = new HashMap<String, String>();
-        params.put(REVISION_PARAM, rev);
-        RestConnection connection = newConnectionBuilder(database, docId)
-            .params(params)
-            .build();
-        return connection.delete().parseAs(responseClss);
+    	RestResponse response = executeDocumentDelete(database, docId, rev);
+	    return response.parseAs(responseClss);
     }
 
-    public <D> D bulkUpdate(String database, List<?> objects, Class<D> responseClss) throws IOException {
-        return bulkUpdate(database, objects).parseAs(responseClss);
-    }
-
-    public RestResponse bulkUpdate(String database, List<?> objects) throws IOException {
-        ensureDatabase(database);
-        DocumentBulkRequest request = new DocumentBulkRequest();
-        request.setDocs(objects);
-        RestConnection connection = newConnectionBuilder(database, BULK_DOCS_PATH)
-            .build();
-        return connection.post(request);
-    }
-    
-    public <T> List<T> queryView(String database, ViewQuery query, Class<T> clss) throws IOException {
-        ViewResult result = queryView(database, query);
-        Iterator<ViewResult.Row> iterator = result.iterator();
-        ArrayList<T> list = new ArrayList<T>();
-        while (iterator.hasNext()) {
-            ViewResult.Row row = iterator.next();
-            list.add(query.isIncludeDocs() ? row.getDocAsObject(clss) : row.getValueAsObject(clss));
-        }
-        return list;
+    public BulkResult bulkUpdate(String database, Object request) throws IOException {
+        RestResponse response = executeBulkUpdate(database, request);
+        return new BulkResult(response);
     }
     
     public ViewResult queryView(String database, ViewQuery query) throws IOException {
-        ensureDatabase(database);
-        RestConnection connection = createConnection(database + query.buildQuery());
-        if (query.hasMultipleKeys()) {
-            String keysAsJson = query.getKeysAsJson();
-            return new ViewResult(connection.getParser(), connection.post(keysAsJson).parse());
-        } else {
-            return new ViewResult(connection.getParser(), connection.get().parse());
-        }
+    	RestResponse response = executeViewQuery(database, query);
+        return new ViewResult(query, response);
     }
     
     public StreamingViewResult queryForStreamingView(String database, ViewQuery query) throws IOException {
-        ensureDatabase(database);
-        RestConnection connection = createConnection(database + query.buildQuery());
-        if (query.hasMultipleKeys()) {
-            String keysAsJson = query.getKeysAsJson();
-            return new StreamingViewResult(connection.getParser(), connection.post(keysAsJson));
-        } else {
-            return new StreamingViewResult(connection.getParser(), connection.get());
-        }
+    	RestResponse response = executeViewQuery(database, query);
+        return new StreamingViewResult(query, response);
     }
     
     public ChangesResult queryChanges(String database, ChangesQuery query) throws IOException {
-        ensureDatabase(database);
-        RestConnection connection = createConnection(database + query.buildQuery());
-        return new ChangesResult(connection.getParser(), connection.get().parse());
+    	RestResponse response = executeChangesQuery(database, query);
+        return new ChangesResult(query, response);
     }
     
     public StreamingChangesResult queryForStreamingChanges(String database, ChangesQuery query) throws IOException {
+    	RestResponse response = executeChangesQuery(database, query);
+        return new StreamingChangesResult(query, response);
+    }
+    
+	public RestResponse executeUuidList(int count) throws IOException {
+        RestConnection connection = newConnectionBuilder(UUIDS_PATH)
+            .param(COUNT_PARAM, String.valueOf(count))
+            .build();
+        return connection.get();
+    }
+
+    public RestResponse executeSessionGet() throws IOException {
+        return executeDatabaseGet(SESSION_PATH);
+    }
+    
+    public RestResponse executeAllDatabasesGet() throws IOException {
+        return executeDatabaseGet(ALL_DBS_PATH);
+    }
+
+    public RestResponse executeDatabaseHead(String database) throws IOException {
         ensureDatabase(database);
-        RestConnection connection = createConnection(database + query.buildQuery());
-        return new StreamingChangesResult(connection.getParser(), connection.get());
+		RestConnection connection = createConnection(database);
+		return connection.head();
+    }
+    
+    public RestResponse executeDatabaseGet(String database) throws IOException {
+        ensureDatabase(database);
+        RestConnection connection = createConnection(database);
+        return connection.get();
+    }
+    
+    public RestResponse executeDatabasePut(String database) throws IOException {
+        ensureDatabase(database);
+        RestConnection connection = createConnection(database);
+        return connection.put();
+    }
+    
+    public RestResponse executeDatabaseDelete(String database) throws IOException {
+        ensureDatabase(database);
+        RestConnection connection = createConnection(database);
+        return connection.delete();
+    }
+
+    public RestResponse executeDocumentHead(String database, String docId) throws IOException {
+        ensureDatabase(database);
+        ensureDocumentId(docId);
+		RestConnection connection = createConnection(database, docId);
+		return connection.head();
+    }
+
+    public RestResponse executeDocumentGet(String database, String docId) throws IOException {
+        ensureDatabase(database);
+        ensureDocumentId(docId);
+		RestConnection connection = createConnection(database, docId);
+		return connection.get();
+    }
+
+    public RestResponse executeDocumentPut(String database, String docId, Object document) throws IOException {
+        ensureDatabase(database);
+        ensureDocumentId(docId);
+		RestConnection connection = createConnection(database, docId);
+		return connection.put(document);
+    }
+
+    public RestResponse executeDocumentPost(String database, Object document) throws IOException {
+        ensureDatabase(database);
+		RestConnection connection = createConnection(database);
+		return connection.post(document);
+    }
+
+    public RestResponse executeDocumentDelete(String database, String docId, String docRev) throws IOException {
+        ensureDatabase(database);
+        ensureDocumentId(docId);
+        ensureDocumentRev(docRev);
+        RestConnection connection = newConnectionBuilder(database, docId)
+            .param(REVISION_PARAM, docRev)
+            .build();
+		return connection.delete();
+    }
+
+    public RestResponse executeBulkUpdate(String database, Object object) throws IOException {
+        ensureDatabase(database);
+		RestConnection connection = createConnection(database, BULK_DOCS_PATH);
+        if (object instanceof List<?>) {
+            DocumentBulkRequest request = new DocumentBulkRequest();
+            request.setDocs((List<?>) object);
+        	return connection.post(request);
+        } else {
+        	return connection.post(object);
+        }
+    }
+
+    public RestResponse executeViewQuery(String database, ViewQuery query) throws IOException {
+        ensureDatabase(database);
+		RestConnection connection = createConnection(database + query.buildQuery());
+        if (query.hasMultipleKeys()) {
+        	return connection.post(query.getKeysAsJson());
+        } else {
+        	return connection.get();
+        }
+    }
+
+    public RestResponse executeChangesQuery(String database, ChangesQuery query) throws IOException {
+        ensureDatabase(database);
+		RestConnection connection = createConnection(database + query.buildQuery());
+    	return connection.get();
     }
     
     private RestConnection createConnection(String... paths) throws IOException {
@@ -365,20 +393,21 @@ public class CouchDbClient {
     }
     
     private void ensureDatabase(String database) throws IOException {
-        if(database == null || database.isEmpty()) {
+        if (database == null || database.isEmpty()) {
             throw new IllegalArgumentException("No database was provided for this operation!");
         }
     }
     
     private void ensureDocumentId(String docId) throws IOException {
-        if(docId == null) {
-            throw new IllegalArgumentException("You must provide a valid docId!");
+        if (docId == null) {
+            throw new IllegalArgumentException("The document must have a valid id.");
         }
     }
     
-    
-    public static class UUIDList {
-    	private List<String> uuids;
+    private void ensureDocumentRev(String docRev) throws IOException {
+        if (docRev == null) {
+            throw new IllegalArgumentException("The document must have a valid revision.");
+        }
     }
     
     

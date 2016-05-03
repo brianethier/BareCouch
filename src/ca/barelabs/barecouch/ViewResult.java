@@ -9,6 +9,7 @@ import java.util.List;
 import ca.barelabs.bareconnection.GsonParser;
 import ca.barelabs.bareconnection.ObjectParser;
 import ca.barelabs.bareconnection.IOUtils;
+import ca.barelabs.bareconnection.RestResponse;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -23,6 +24,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
     public static final String FIELD_ROWS = "rows";
     public static final String FIELD_UPDATE_SEQ = "update_seq";
 
+    private final ViewQuery mQuery;
     private final ObjectParser mParser;
     private long mOffset;
     private long mTotalRows;
@@ -30,11 +32,19 @@ public class ViewResult implements Iterable<ViewResult.Row> {
     private List<Row> mRows = new ArrayList<Row>();
     
 
-    public ViewResult(ObjectParser parser, String result) {
-        mParser = parser;
-        parseMetadata(result);
+    public ViewResult(ViewQuery query, RestResponse response) throws IOException {
+    	mQuery = query;
+        mParser = response.getParser();
+        parseMetadata(response.parse());
     }
     
+    public ViewQuery getQuery() {
+    	return mQuery;
+    }
+    
+    public ObjectParser getParser() {
+    	return mParser;
+    }
 
     public long getOffset() {
         return mOffset;
@@ -62,6 +72,16 @@ public class ViewResult implements Iterable<ViewResult.Row> {
 
     public boolean isEmpty() {
         return mRows.isEmpty();
+    }
+    
+    public <D> List<D> getList(Class<D> clss) throws IOException {
+        Iterator<Row> iterator = iterator();
+        List<D> list = new ArrayList<D>();
+        while (iterator.hasNext()) {
+            Row row = iterator.next();
+            list.add(mQuery.isIncludeDocs() ? row.getDocAsObject(clss) : row.getValueAsObject(clss));
+        }
+        return list;
     }
     
     private final void parseMetadata(String result) {
