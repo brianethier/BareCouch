@@ -17,19 +17,21 @@ package ca.barelabs.barecouch;
 
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 import ca.barelabs.bareconnection.BackOffPolicy;
 import ca.barelabs.bareconnection.ObjectParser;
+import ca.barelabs.bareconnection.ProxyStream;
 import ca.barelabs.bareconnection.RestConnection;
 import ca.barelabs.bareconnection.RestException;
 import ca.barelabs.bareconnection.RestProperties;
 import ca.barelabs.bareconnection.RestResponse;
 import ca.barelabs.bareconnection.RestUtils;
-import ca.barelabs.barecouch.responses.SessionResponse;
 import ca.barelabs.barecouch.responses.DatabaseInfo;
 import ca.barelabs.barecouch.responses.DocumentResponse;
 import ca.barelabs.barecouch.responses.Response;
+import ca.barelabs.barecouch.responses.SessionResponse;
 import ca.barelabs.barecouch.responses.UuidList;
 
 public class CouchDbClient {
@@ -248,6 +250,14 @@ public class CouchDbClient {
     	RestResponse response = executeDocumentDelete(database, docId, rev);
 	    return response.parseAs(responseClss);
     }
+    
+    public void getAttachment(String database, String docId, String attachmentName, ProxyStream stream) throws IOException{
+    	this.executeAttachmentGet(database, docId, attachmentName, stream);
+    }
+    
+    public void setAttachment(String database, String docId, String docRev, String attachmentName, InputStream attachmentStream, String contentType, int contentLength) throws IOException{
+    	this.executeAttachmentPut(database, docId, docRev, attachmentName, attachmentStream, contentType, contentLength);
+    }
 
     public BulkResult bulkUpdate(String database, Object request) throws IOException {
         RestResponse response = executeBulkUpdate(database, request);
@@ -348,6 +358,21 @@ public class CouchDbClient {
             .param(REVISION_PARAM, docRev)
             .build();
 		return connection.delete();
+    }
+    
+    public void executeAttachmentGet(String database, String docId, String attachmentName, ProxyStream stream) throws IOException{
+    	ensureDatabase(database);
+        ensureDocumentId(docId);
+        RestConnection connection = createConnection(database, docId, attachmentName); // TODO: URL encode the attachment name
+        connection.get(stream);
+    }
+    
+    public RestResponse executeAttachmentPut(String database, String docId, String docRev, String attachmentName, InputStream attachmentStream, String contentType, int contentLength) throws IOException {
+    	ensureDatabase(database);
+        ensureDocumentId(docId);
+        ensureDocumentRev(docRev);
+        RestConnection connection = createConnection(database, docId, attachmentName + "?rev=" + docRev); // TODO: URL encode the attachment name
+		return connection.put(attachmentStream,  contentType, contentLength);
     }
 
     public RestResponse executeBulkUpdate(String database, Object object) throws IOException {
