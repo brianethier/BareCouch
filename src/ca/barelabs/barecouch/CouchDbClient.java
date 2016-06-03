@@ -19,6 +19,7 @@ package ca.barelabs.barecouch;
 import java.io.IOException;
 import java.util.List;
 
+import ca.barelabs.bareconnection.ContentInputStream;
 import ca.barelabs.bareconnection.BackOffPolicy;
 import ca.barelabs.bareconnection.ObjectParser;
 import ca.barelabs.bareconnection.RestConnection;
@@ -248,6 +249,26 @@ public class CouchDbClient {
     	RestResponse response = executeDocumentDelete(database, docId, rev);
 	    return response.parseAs(responseClss);
     }
+    
+    public ContentInputStream getAttachment(String database, String docId, String attachmentName) throws IOException {
+        return getAttachment(database, docId, null, attachmentName);
+    }
+    
+    public ContentInputStream getAttachment(String database, String docId, String rev, String attachmentName) throws IOException {
+        RestResponse response = executeGetAttachment(database, docId, rev, attachmentName);
+        String contentType = response.getConnection().getContentType();
+        int contentLength = response.getConnection().getContentLength();
+        return new ContentInputStream(response.getContent(), contentType, contentLength);
+    }
+    
+    public DocumentResponse createAttachment(String database, String docId, String rev, String attachmentName, ContentInputStream in) throws IOException {
+        return createAttachment(database, docId, rev, attachmentName, in, DocumentResponse.class);
+    }
+    
+    public <D> D createAttachment(String database, String docId, String rev, String attachmentName, ContentInputStream in, Class<D> responseClss) throws IOException {
+    	RestResponse response = executeCreateAttachment(database, docId, rev, attachmentName, in);
+	    return response.parseAs(responseClss);
+    }
 
     public BulkResult bulkUpdate(String database, Object request) throws IOException {
         RestResponse response = executeBulkUpdate(database, request);
@@ -350,6 +371,30 @@ public class CouchDbClient {
 		return connection.delete();
     }
 
+    public RestResponse executeGetAttachment(String database, String docId, String docRev, String attachmentName) throws IOException {
+        ensureDatabase(database);
+        ensureDocumentId(docId);
+        ensureAttachmentName(attachmentName);
+        RestConnection.Builder builder = newConnectionBuilder(database, docId, attachmentName);
+        if (docRev != null) {
+            builder.param(REVISION_PARAM, docRev);
+        }
+        RestConnection connection = builder.build();
+        return connection.get();
+    }
+      
+
+    public RestResponse executeCreateAttachment(String database, String docId, String docRev, String attachmentName, Object object) throws IOException {
+        ensureDatabase(database);
+        ensureDocumentId(docId);
+        ensureDocumentRev(docRev);
+        ensureAttachmentName(attachmentName);
+        RestConnection connection = newConnectionBuilder(database, docId, attachmentName)
+            .param(REVISION_PARAM, docRev)
+            .build();
+        return connection.put(object);
+    }
+
     public RestResponse executeBulkUpdate(String database, Object object) throws IOException {
         ensureDatabase(database);
 		RestConnection connection = createConnection(database, BULK_DOCS_PATH);
@@ -407,6 +452,12 @@ public class CouchDbClient {
     private void ensureDocumentRev(String docRev) throws IOException {
         if (docRev == null) {
             throw new IllegalArgumentException("The document must have a valid revision.");
+        }
+    }
+    
+    private void ensureAttachmentName(String attachmentName) throws IOException {
+        if (attachmentName == null) {
+            throw new IllegalArgumentException("The attachment must have a valid name.");
         }
     }
     
