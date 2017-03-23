@@ -32,6 +32,7 @@ import ca.barelabs.barecouch.responses.DatabaseInfo;
 import ca.barelabs.barecouch.responses.DocumentResponse;
 import ca.barelabs.barecouch.responses.Response;
 import ca.barelabs.barecouch.responses.UuidList;
+import com.google.gson.reflect.TypeToken;
 
 public class CouchDbClient {
 
@@ -99,7 +100,7 @@ public class CouchDbClient {
     }
     
     public List<String> getAllDatabases() throws IOException {
-        return executeAllDatabasesGet().parseAsList(String.class);
+        return executeAllDatabasesGet().parseAs(new TypeToken<List<String>>(){}.getType());
     }
     
     public DatabaseInfo getDatabaseInfo(String database) throws IOException {

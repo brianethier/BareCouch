@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import ca.barelabs.bareconnection.RestResponse;
+import com.google.gson.reflect.TypeToken;
 
 public class BulkResult implements Iterable<BulkResult.DocumentResult> {
 
@@ -13,7 +14,7 @@ public class BulkResult implements Iterable<BulkResult.DocumentResult> {
     
 
     public BulkResult(RestResponse response) throws IOException {
-    	mResults = response.parseAsList(DocumentResult.class);
+    	mResults = response.parseAs(new TypeToken<List<DocumentResult>>(){}.getType());
     }
     
     public List<DocumentResult> getResults() {

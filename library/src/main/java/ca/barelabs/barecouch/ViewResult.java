@@ -212,7 +212,7 @@ public class ViewResult implements Iterable<ViewResult.Row> {
             	return null;
             }
             if (mParser instanceof GsonParser) {
-                return ((GsonParser) mParser).parse(element, clss);
+                return ((GsonParser) mParser).parse(element.toString(), clss);
             } else {
                 return mParser.parse(element.toString(), clss);
             }
